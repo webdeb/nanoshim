@@ -35,7 +35,7 @@ class UIListProgram:
     self.render()
 
   def rotary_two_handler(self, event):
-    if (self.items[self.selected_item]["handle_change"]):
+    if ("handle_change" in self.items[self.selected_item]):
       self.items[self.selected_item]["handle_change"](event)
 
     self.render()

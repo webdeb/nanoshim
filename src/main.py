@@ -10,16 +10,15 @@ async def main():
 
   # run this first, this is the critical part.
   pwm_program = Pwm(on_exit=open_menu)
+  settings_program = Settings(on_exit=open_menu)
 
   main_menu_program = MainMenu(
     open_pwm=open_pwm,
     open_settings=open_settings
   )
 
-  settings_program = Settings(on_exit=open_menu)
-
   # Start with menu
-  open_menu()
+  open_pwm()
 
 if __name__ == "__main__":
   asyncio.run(main())

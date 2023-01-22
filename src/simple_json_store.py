@@ -24,7 +24,6 @@ class Store:
     os.chdir("/")
 
     if (self.file_name not in os.listdir(self.dir)):
-      print(os.listdir(self.dir), self.dir, self.file_name)
       self.save(self.inital_data) # Initialy it will save
 
   def load(self):
@@ -49,13 +48,15 @@ class Store:
     else:
       obj[path_parts[-1]] = value
 
-    if (not self.is_saving_scheduled):
-      self.is_saving_scheduled = True
-      micropython.schedule(self.save, None)
+    self.save()
 
-  def get(self, path):
+  def get(self, path, data=None):
+    if (data):
+      obj = data
+    else:
+      obj = self.data
+
     path_parts = path.split(".")
-    obj = self.data
 
     for part in path_parts:
       if part.isdigit():
