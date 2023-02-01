@@ -34,7 +34,6 @@ PWM_ENR = uctypes.bytearray_at(PWM_BASE + PWM_EN, 4)
 # PWM EN register offset
 
 # Enable or disable PWM channels
-
 def set_pwm_channels(channels, en):
   en_reg = PWM_ENR[0]
   for channel in channels:

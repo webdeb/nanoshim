@@ -27,23 +27,23 @@ class Pwm(UIListProgram):
   pin_package = 14
 
   # Push & Pull
-  pin_push_pull_one = 8
+  pin_push_pull_one = 9
   pin_push_pull_two = 7
   pin_push_pull_offset = 6
 
   max_freq_exp = 7 # 1Mhz.
-  max_duty_exp = 2 # 10000ns = 10ms
+  max_duty_exp = 3 # 10000ns = 10ms
   
   title = "PuPa / PuPu"
   pwm_exp = {
-    "pulse_freq": 1,
-    "pulse_duty": 1,
-    "package_freq": 1,
-    "package_duty": 1,
-    "pushpull_freq": 1,
-    "pushpull_duty_one": 1,
-    "pushpull_duty_two": 1,
-    "pushpull_duty_offset": 1,
+    "pulse_freq": 3,
+    "pulse_duty": 2,
+    "package_freq": 3,
+    "package_duty": 2,
+    "pushpull_freq": 3,
+    "pushpull_duty_one": 2,
+    "pushpull_duty_two": 2,
+    "pushpull_duty_offset": 2,
   }
   pwms = {}
 
@@ -57,7 +57,7 @@ class Pwm(UIListProgram):
         "exp": "pulse_freq", 
       },
       {
-        "text": ["PulsD:", lambda: str(round(store.get(PULSE_DUTY)))+ " /pm"],
+        "text": ["PulsD:", lambda: str(round(store.get(PULSE_DUTY)))+ "/pm"],
         "handle_change": lambda event: self.change_duty("pulse", event),
         "exp": "pulse_duty", 
       },
@@ -67,33 +67,33 @@ class Pwm(UIListProgram):
         "exp": "package_freq",
       },
       {
-        "text": ["PackD:", lambda: str(round(store.get(PACKAGE_DUTY)))+ "/pm"],
+        "text": ["PackD:", lambda: str(round(store.get(PACKAGE_DUTY)))+ "/oo"],
         "handle_change": lambda event: self.change_duty("package", event),
         "exp": "package_duty",
       },
       # Push - Pull
       # 
       {
-        "text": ["PPMode:", lambda: str(store.get(PUSHPULL_MODE))],
+        "text": ["PP Mode:", lambda: str(store.get(PUSHPULL_MODE))],
         "handle_change": lambda event: self.change_push_pull_mode(event),
       },
       {
-        "text": ["PPFq:", lambda: str(round(store.get(PUSHPULL_FREQ)))],
+        "text": ["Freq:", lambda: str(round(store.get(PUSHPULL_FREQ)))],
         "handle_change": lambda event: self.change_push_pull_freq(event),
         "exp": "pushpull_freq",
       },
       {
-        "text": ["PPDuty:", lambda: str(round(store.get(PUSHPULL_DUTY_ONE)))+ "/pm"],
+        "text": ["Duty 1:", lambda: str(round(store.get(PUSHPULL_DUTY_ONE)))+ "/oo"],
         "handle_change": lambda event: self.change_push_pull_duty("one", event),
         "exp": "pushpull_duty_one",
       },
       {
-        "text": ["Duty 2:", lambda: str(round(store.get(PUSHPULL_DUTY_TWO)))+ "/pm"],
+        "text": ["Duty 2:", lambda: str(round(store.get(PUSHPULL_DUTY_TWO)))+ "/oo"],
         "handle_change": lambda event: self.change_push_pull_duty("two", event),
         "exp": "pushpull_duty_two",
       },
       {
-        "text": ["Offset:", lambda: str(round(store.get(PUSHPULL_DUTY_OFFSET)))+ "/pm"],
+        "text": ["Offset:", lambda: str(round(store.get(PUSHPULL_DUTY_OFFSET)))+ "/oo"],
         "handle_change": lambda event: self.change_push_pull_duty("offset", event),
         "exp": "pushpull_duty_offset",
       },
@@ -239,7 +239,10 @@ class Pwm(UIListProgram):
     self.pwms["push_pull_two"] = self._create_pwm(self.pin_push_pull_two, freq)
     self.pwms["push_pull_offset"] = self._create_pwm(self.pin_push_pull_offset, freq)
 
-    set_channel_inverted(get_pins_slice(self.pin_push_pull_two), "B", 1)
+    set_channel_inverted(
+      get_pins_slice(self.pin_push_pull_two),
+      get_pins_channel(self.pin_push_pull_two)
+    )
 
     # Start pwms..
     self.restart_push_pull()
@@ -250,6 +253,7 @@ class Pwm(UIListProgram):
   def restart_push_pull(self):
     slices = [
       get_pins_slice(self.pin_push_pull_one),
+      get_pins_slice(self.pin_push_pull_two),
       get_pins_slice(self.pin_push_pull_offset)
     ]
 
@@ -298,3 +302,6 @@ class Pwm(UIListProgram):
 
 def get_pins_slice(pin):
   return pin // 2 % 8
+    
+def get_pins_channel(pin):
+  return "A" if pin % 2 == 0 else "B"

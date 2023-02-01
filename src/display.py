@@ -4,6 +4,15 @@ import images
 import ssd1306
 from store import store, CONTRAST_PATH
 
+# specialchars = {}
+# with open('promille.pbm', 'rb') as f:
+#     f.readline() # Magic number
+#     f.readline() # Creator comment
+#     f.readline() # Dimensions
+#     data = bytearray(f.read())
+
+# specialchars["‰"] = framebuf.FrameBuffer(data, 9, 8, framebuf.MONO_HLSB)
+
 class Display:
   def __init__(self):
     # Set up the I2C interface
