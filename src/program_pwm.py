@@ -34,7 +34,7 @@ class Pwm(UIListProgram):
   max_freq_exp = 7 # 1Mhz.
   max_duty_exp = 3 # 10000ns = 10ms
   
-  title = "PuPa / PuPu"
+  title = "HACK PWM v0.0.1"
   pwm_exp = {
     "pulse_freq": 3,
     "pulse_duty": 2,
