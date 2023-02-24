@@ -1,6 +1,5 @@
 import os
 import json
-import micropython
 
 class Store:
   is_loading = False
@@ -15,6 +14,9 @@ class Store:
     self.ensure_file()
     self.load()
 
+  """
+    Ensure the file exists and is initialised
+  """
   def ensure_file(self):
     for path_part in self.dir.split("/"):
       if (path_part not in os.listdir()):
@@ -26,6 +28,9 @@ class Store:
     if (self.file_name not in os.listdir(self.dir)):
       self.save(self.inital_data) # Initialy it will save
 
+  """
+    Loads the file into memory
+  """
   def load(self):
     self.is_loading = True
     f = open(self.path)

@@ -36,15 +36,25 @@ class Display:
       if type(item) is not list:
         item = [item, lambda: ""]
 
-      [text, fun] = item
-      text_addition = fun()
+      [left, right] = item
+      text_addition = right()
+
+      left_text = ""
+      if (type(left) is list):
+        for item in left:
+          if (callable(item)):
+            item = item()
+
+          left_text += str(item)
+      else:
+        left_text = left
 
       # Fill a white rect around the item, when its active
       if is_active:
         menubuf.fill_rect(0, text_y_pos - 3, 128, 12, 1)
 
       # Put the static text, which is mostly the label 
-      menubuf.text(text, 0, text_y_pos, int(not is_active))
+      menubuf.text(left_text, 0, text_y_pos, int(not is_active))
 
       # add text addition, align to right.
       # we have max 128pixel calculate the text_addition pixel len

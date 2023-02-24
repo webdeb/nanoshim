@@ -30,7 +30,7 @@ class Settings(UIListProgram):
     elif (event == Rotary.DEC):
       freq -= 1
 
-    machine.freq(max(100, min(130, freq)) * 1_000_000)
+    machine.freq(max(100, min(200, freq)) * 1_000_000)
 
   def get_contrast(self):
     return str(self.display.get_contrast())

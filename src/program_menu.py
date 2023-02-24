@@ -1,11 +1,8 @@
 from ui_program import UIListProgram
 
 class MainMenu(UIListProgram):
-  def __init__(self, open_pwm, open_settings):
+  def __init__(self, items):
     self.title = "Menu"
-    self.items = [
-      { "text": "PWM", "handle_button": open_pwm },
-      { "text": "Board Settings", "handle_button": open_settings }
-    ]
+    self.items = [{ "text": k, "handle_button": v } for k, v in items.items()]
 
     super().__init__()

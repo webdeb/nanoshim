@@ -188,13 +188,23 @@ class Pwm(UIListProgram):
     # but the setting will increase, and eventually the pwm too.
     new_freq = max(2_000, min(5_000_000, new_freq))
     store.set(f"system.{pwm}.freq", new_freq)
+
+    old_freq = self.pwms[pwm].freq()
     self.pwms[pwm].freq(new_freq)
-    self.render()
+    new_freq = self.pwms[pwm].freq()
+
+    # If freq did not changed, but can be changed, repeat.
+    if (old_freq == new_freq and 2_000 < new_freq < 5_000_000):
+      return self.change_freq(pwm, event)
+
+    store.set(f"system.{pwm}.freq", new_freq)
 
     set_pwm_channels([
       get_pins_slice(self.pin_pulse),
       get_pins_slice(self.pin_package),
     ], 1)
+
+    self.render()
 
   def change_duty(self, pwm, event):
     new_duty = store.get(f"system.{pwm}.duty")
