@@ -11,8 +11,10 @@ class Store:
     self.inital_data = inital_data
     self.dir = "/".join(path.split("/")[0:-1])
     self.file_name = path.split("/")[-1]
+
     self.ensure_file()
     self.load()
+    self.ensure_version()
 
   """
     Ensure the file exists and is initialised
@@ -27,6 +29,12 @@ class Store:
 
     if (self.file_name not in os.listdir(self.dir)):
       self.save(self.inital_data) # Initialy it will save
+
+  def ensure_version(self):
+    print(self.data, self.inital_data)
+    if (self.data.get("version", None) != self.inital_data.get("version", None)):
+      self.save(self.inital_data)
+      self.load()
 
   """
     Loads the file into memory
@@ -56,20 +64,23 @@ class Store:
     self.save()
 
   def get(self, path, data=None):
-    if (data):
-      obj = data
-    else:
-      obj = self.data
-
-    path_parts = path.split(".")
-
-    for part in path_parts:
-      if part.isdigit():
-        obj = obj[int(part)]
+    try:
+      if (data):
+        obj = data
       else:
-        obj = obj[part]
+        obj = self.data
 
-    return obj
+      path_parts = path.split(".")
+
+      for part in path_parts:
+        if part.isdigit():
+          obj = obj[int(part)]
+        else:
+          obj = obj[part]
+      return obj
+    except:
+      print(path)
+      return 0
 
   def save(self, data=None):
     if data == None:

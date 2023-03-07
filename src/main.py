@@ -5,6 +5,7 @@ from program_pwm_new import Pwm
 # from _pulse_package_pwm import Pwm
 
 async def main():
+  print("Start main")
   open_pwm = lambda: pwm_program.active(1)
   open_menu = lambda: main_menu_program.active(1)
   open_settings = lambda: settings_program.active(1)

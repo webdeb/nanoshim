@@ -2,7 +2,7 @@ from machine import Pin
 import time
 
 def noop(_v):
-  print("call handler..", _v)
+  # print("call handler..", _v)
   pass
 
 class Rotary:

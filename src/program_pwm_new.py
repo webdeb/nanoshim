@@ -15,6 +15,9 @@ from store import (
   PULSE_DUTY,
   PACKAGE_FREQ,
   PACKAGE_DUTY,
+  PACKAGE_TOP,
+  PACKAGE_COUNT,
+  PACKAGE_SHIFT,
   PUSHPULL_MODE,
   PUSHPULL_FREQ,
   PUSHPULL_DUTY_ONE,
@@ -64,27 +67,33 @@ class Pwm(UIListProgram):
     self.default_items = [
       # Pulse Package
       {
-        "text": ["PulsF:", lambda: str(round(store.get(PULSE_FREQ)))],
+        "text": ["Freq:", lambda: str(store.get(PULSE_FREQ))],
         "handle_change": lambda event: self.change_pulse_freq(event),
         "exp": "pulse_freq", 
       },
       {
-        "text": ["PulsD:", lambda: str(round(store.get(PULSE_DUTY))) + 'ns'],
+        "text": ["Duty:", lambda: str(store.get(PULSE_DUTY)) + 'ns'],
         "handle_change": lambda event: self.change_pulse_duty(event),
         "exp": "pulse_duty", 
       },
       {
-        "text": ["PackF:", lambda: str(round(store.get(PACKAGE_FREQ)))],
+        "text": ["Package:", lambda: str(store.get(PACKAGE_TOP))],
         "handle_change": lambda event: self.change_package_freq(event),
-        "exp": "package_freq",
       },
       {
-        "text": ["PackD:", lambda: str(round(store.get(PACKAGE_DUTY)))],
+        "text": ["Count:", lambda: str(store.get(PACKAGE_COUNT))],
         "handle_change": lambda event: self.change_package_duty(event),
-        "exp": "package_duty",
       },
-      # Push - Pull
-      # 
+      {
+        "text": ["Shift:", lambda: str(store.get(PACKAGE_SHIFT))],
+        "handle_change": lambda event: self.change_package_shift(event),
+      },
+      # # Push - Pull
+      # # 
+      # {
+      #   "text": "Push & Pull",
+      #   "selectable": False,
+      # },
       {
         "text": ["PP Mode:", lambda: str(store.get(PUSHPULL_MODE))],
         "handle_change": lambda event: self.change_push_pull_mode(event),
@@ -195,84 +204,33 @@ class Pwm(UIListProgram):
 
 
   def change_package_freq(self, event):
-    pwm = "package"
-    new_freq = store.get(f"system.{pwm}.freq")
-    exp = self.pwm_exp[f"{pwm}_freq"]
-
-    if (event == Rotary.TAP):
-      self.pwm_exp[f"{pwm}_freq"] = (exp - 1) % self.max_freq_exp
-      return self.render()
-    elif (event == Rotary.INC):
-      new_freq += (10 ** exp)
+    top = int(store.get(PACKAGE_TOP))
+    if (event == Rotary.INC):
+      top += 1
     elif (event == Rotary.DEC):
-      new_freq -= (10 ** exp)
+      top -= 1
 
-    # change the setting, the pwm will cannot handle every adjustment..
-    # but the setting will increase, and eventually the pwm too.
-    new_freq = max(2_000, min(self.pwms["pulse"].freq(), new_freq))
-
-    old_freq = self.pwms[pwm].freq()
-    self.pwms[pwm].freq(new_freq)
-    new_freq = self.pwms[pwm].freq()
-
-    # If freq did not changed, but can be changed, repeat.
-    # print("Package FREQ: Old / New", old_freq, new_freq)
-    if (old_freq == new_freq):
-      pin = Pwm.__dict__["pin_" + pwm]
-      pulse_wrap = PWM_REGISTERS[get_pins_slice(self.pin_pulse)].TOP.WRAP
-      # print("Package FREQ", pulse_wrap)
-      if (event == Rotary.INC):
-        # When we are increasing the freq, the top value needs to be decreased
-        decrease_top(pin, pulse_wrap)
-      else:
-        increase_top(pin, pulse_wrap)
-      
-    # We need to do it again, so MP can adjust the duty.
-    new_freq = self.pwms[pwm].freq()
-    self.pwms[pwm].freq(new_freq)
-
-    store.set(f"system.{pwm}.freq", new_freq)
-
+    store.set(PACKAGE_TOP, top)
     self.align_package_to_pulse(event)
     self.render()
 
   def change_package_duty(self, event):
-    pwm = "package"
-    new_duty = store.get(f"system.{pwm}.duty")
-    exp = self.pwm_exp[f"{pwm}_duty"]
+    count = int(store.get(PACKAGE_COUNT))
 
-    if (event == Rotary.TAP):
-      self.pwm_exp[f"{pwm}_duty"] = (exp - 1) % self.max_duty_exp
-      return self.render()
-    elif (event == Rotary.INC):
-      new_duty += 10 ** exp
+    if (event == Rotary.INC):
+      count += 1
     elif (event == Rotary.DEC):
-      new_duty -= 10 ** exp
+      count -= 1
 
-    # change the setting, the pwm will cannot handle every adjustment..
-    # but the setting will increase, and eventually the pwm too.
-    # print("Try to set", new_duty)
-    old_duty = self.pwms[pwm].duty_u16()
-    self.pwms[pwm].duty_u16(max(1000, min(new_duty, 65535)))
-    new_duty = self.pwms[pwm].duty_u16()
-
-    if (old_duty == new_duty):
-      package_slice = get_pins_slice(self.pin_package)
-      pulse_wrap = PWM_REGISTERS[get_pins_slice(self.pin_package)].TOP.WRAP
-      package_channel = get_pins_channel(self.pin_package)
-      if (Rotary.DEC):
-        pulse_wrap = -pulse_wrap
-      if (package_channel == "A"):
-        PWM_REGISTERS[package_slice].COMPARE.A += pulse_wrap
-      else:
-        PWM_REGISTERS[package_slice].COMPARE.B += pulse_wrap
-
-    # print("DUTY FIX", old_duty, new_duty, self.pwms[pwm].duty_u16())
-
+    store.set(PACKAGE_COUNT, count)
     self.align_package_to_pulse(event)
     self.render()
 
-  def align_package_to_pulse(self, event=None):
+  def change_package_shift(self, event):
+    # TODO
+    pass
+
+  def _align_package_to_pulse(self, event=None):
     # Get the pulse wrap
     # Get the package wrap
     # calculate rounded multiple
@@ -333,17 +291,45 @@ class Pwm(UIListProgram):
     #   PWM_REGISTERS[pu_slice].COMPARE.B,
     # )
 
+  def align_package_to_pulse(self, event=None):
+    pu_slice = get_pins_slice(self.pin_pulse)
+    pa_slice = get_pins_slice(self.pin_package)
+    pa_channel = get_pins_channel(self.pin_package)
 
-  def _create_pulse_package_pwm_group(self):
-    self.pwms["pulse"] = self._create_pwm(self.pin_pulse, store.get(PULSE_FREQ))
-    self.pwms["pulse"].duty_u16(round(65535 * store.get(PULSE_DUTY) / 1000))
-    self.pwms["package"] = self._create_pwm(self.pin_package, store.get(PACKAGE_FREQ))
-    self.pwms["package"].duty_u16(round(65535 * store.get(PACKAGE_DUTY) / 1000))
+    top = int(store.get(PACKAGE_TOP))
+    count = int(store.get(PACKAGE_COUNT))
+
+    top_count_relation = count/top
+
+    pu_wrap = PWM_REGISTERS[pu_slice].TOP.WRAP + 1
+    # pa_wrap = PWM_REGISTERS[pa_slice].TOP.WRAP + 1
+
+    # calculate the optimal package_top
+    package_top = max(0, min(pu_wrap * top, 65534))
+    count_top = max(0, min(count * pu_wrap, package_top))
+
+    # If changed set..
+    PWM_REGISTERS[pa_slice].TOP.WRAP = package_top - 1
+    if (pa_channel == "A"):
+      PWM_REGISTERS[pa_slice].COMPARE.A = count_top - 1
+    else:
+      PWM_REGISTERS[pa_slice].COMPARE.B = count_top - 1
+
+    # store.set(PACKAGE_TOP, top)
+    # store.set(PACKAGE_COUNT, count)
 
     set_pwm_channels([
       get_pins_slice(self.pin_pulse),
       get_pins_slice(self.pin_package),
     ], 1)
+
+  def _create_pulse_package_pwm_group(self):
+    self.pwms["pulse"] = self._create_pwm(self.pin_pulse, store.get(PULSE_FREQ))
+    self.pwms["pulse"].duty_ns(store.get(PULSE_DUTY))
+    self.pwms["package"] = self._create_pwm(self.pin_package)
+    self.pwms["package"].duty_u16()
+
+    self.align_package_to_pulse()
 
   """
   PUSH & PULL

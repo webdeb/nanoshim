@@ -9,6 +9,9 @@ PULSE_FREQ            = "system.pulse.freq"
 PULSE_DUTY            = "system.pulse.duty"
 PACKAGE_FREQ          = "system.package.freq"
 PACKAGE_DUTY          = "system.package.duty"
+PACKAGE_TOP           = "system.package.top"
+PACKAGE_COUNT         = "system.package.count"
+PACKAGE_SHIFT         = "system.package.shift"
 
 PUSHPULL_MODE         = "system.push_pull.mode"
 PUSHPULL_FREQ         = "system.push_pull.freq"
@@ -26,7 +29,10 @@ SYSTEN_STRUCTURE = {
   },
   "package": {
     "freq": 50_000,
-    "duty": 200
+    "duty": 200,
+    "top": 20,
+    "count": 4,
+    "shift": 0,
   },
   "push_pull": {
     "mode": PUSHPULL_MODE_SYNC,
@@ -40,6 +46,7 @@ SYSTEN_STRUCTURE = {
 }
 
 INIT_STRUCTURE = {
+  "version": 1,
   "settings": {
     "contrast": 200,
     "machine_freq": 125_000_000
