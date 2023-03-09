@@ -53,6 +53,7 @@ class Pwm(UIListProgram):
   pwm_exp = {
     "pulse_freq": 3,
     "pulse_duty": 2,
+    "pulse_shift": 1,
     "package_freq": 3,
     "package_duty": 2,
     "pushpull_freq": 3,
@@ -87,6 +88,7 @@ class Pwm(UIListProgram):
       {
         "text": ["Shift:", lambda: str(store.get(PACKAGE_SHIFT))],
         "handle_change": lambda event: self.change_package_shift(event),
+        "exp": "pulse_shift", 
       },
       # # Push - Pull
       # # 
@@ -227,69 +229,21 @@ class Pwm(UIListProgram):
     self.render()
 
   def change_package_shift(self, event):
-    # TODO
-    pass
+    shift = int(store.get(PACKAGE_SHIFT))
+    exp = self.pwm_exp["pulse_shift"] - 1
 
-  def _align_package_to_pulse(self, event=None):
-    # Get the pulse wrap
-    # Get the package wrap
-    # calculate rounded multiple
-    # set rounded multiple
-    # set rounded multiple
-    pu_slice = get_pins_slice(self.pin_pulse)
-    pa_slice = get_pins_slice(self.pin_package)
-    pa_channel = get_pins_channel(self.pin_package)
-
-    pu_wrap = PWM_REGISTERS[pu_slice].TOP.WRAP + 1
-    pa_wrap = PWM_REGISTERS[pa_slice].TOP.WRAP + 1
-
-    if (pa_channel == "A"):
-      pa_cc = PWM_REGISTERS[pa_slice].COMPARE.A
-    else:
-      pa_cc = PWM_REGISTERS[pa_slice].COMPARE.B
-
-    # Round the multiples
+    if (event == Rotary.TAP):
+      self.pwm_exp["pulse_shift"] = (self.pwm_exp["pulse_shift"] - 1) % 2
+      return self.render()
     if (event == Rotary.INC):
-      PWM_REGISTERS[pa_slice].TOP.WRAP = math.floor(pa_wrap / pu_wrap) * pu_wrap - 1
-      if (pa_channel == "A"):
-        PWM_REGISTERS[pa_slice].COMPARE.A = math.ceil(pa_cc / pu_wrap) * pu_wrap
-      else:
-        PWM_REGISTERS[pa_slice].COMPARE.B = math.ceil(pa_cc / pu_wrap) * pu_wrap
+      shift += 10 ** exp
     elif (event == Rotary.DEC):
-      PWM_REGISTERS[pa_slice].TOP.WRAP = math.ceil(pa_wrap / pu_wrap) * pu_wrap - 1
-      if (pa_channel == "A"):
-        PWM_REGISTERS[pa_slice].COMPARE.A = math.floor(pa_cc / pu_wrap) * pu_wrap
-      else:
-        PWM_REGISTERS[pa_slice].COMPARE.B = math.floor(pa_cc / pu_wrap) * pu_wrap
-    else:
-      PWM_REGISTERS[pa_slice].TOP.WRAP = round(pa_wrap / pu_wrap) * pu_wrap - 1
-      if (pa_channel == "A"):
-        PWM_REGISTERS[pa_slice].COMPARE.A = round(pa_cc / pu_wrap) * pu_wrap
-      else:
-        PWM_REGISTERS[pa_slice].COMPARE.B = round(pa_cc / pu_wrap) * pu_wrap
+      shift -= 10 ** exp
 
-    store.set(PACKAGE_FREQ, self.pwms["package"].freq())
-    store.set(PACKAGE_DUTY, self.pwms["package"].duty_u16())
+    store.set(PACKAGE_SHIFT, shift)
+    self.align_package_to_pulse(event)
+    self.render()
 
-    set_pwm_channels([
-      get_pins_slice(self.pin_pulse),
-      get_pins_slice(self.pin_package),
-    ], 1)
-
-    # print(
-    #   "\n---\n",
-    #   "DEBUG REGISTERS",
-    #   pu_slice,
-    #   pa_slice,
-    #   "PULSE TOP & PACKAGE TOP & COMPARE",
-    #   "\n---\n",
-    #   PWM_REGISTERS[pu_slice].TOP.WRAP,
-    #   PWM_REGISTERS[pa_slice].TOP.WRAP,
-    #   PWM_REGISTERS[pa_slice].COMPARE.A,
-    #   PWM_REGISTERS[pa_slice].COMPARE.B,
-    #   PWM_REGISTERS[pu_slice].COMPARE.A,
-    #   PWM_REGISTERS[pu_slice].COMPARE.B,
-    # )
 
   def align_package_to_pulse(self, event=None):
     pu_slice = get_pins_slice(self.pin_pulse)
@@ -299,28 +253,29 @@ class Pwm(UIListProgram):
     top = int(store.get(PACKAGE_TOP))
     count = int(store.get(PACKAGE_COUNT))
 
-    top_count_relation = count/top
+    top_count_relation = count/max(1, top)
 
     pu_wrap = PWM_REGISTERS[pu_slice].TOP.WRAP + 1
     # pa_wrap = PWM_REGISTERS[pa_slice].TOP.WRAP + 1
 
     # calculate the optimal package_top
-    package_top = max(0, min(pu_wrap * top, 65534))
+    package_top = max(0, min(pu_wrap * top, 65536))
     count_top = max(0, min(count * pu_wrap, package_top))
+    shift = int(store.get(PACKAGE_SHIFT))
 
     # If changed set..
     PWM_REGISTERS[pa_slice].TOP.WRAP = package_top - 1
     if (pa_channel == "A"):
-      PWM_REGISTERS[pa_slice].COMPARE.A = count_top - 1
+      PWM_REGISTERS[pa_slice].COMPARE.A = count_top + shift
     else:
-      PWM_REGISTERS[pa_slice].COMPARE.B = count_top - 1
+      PWM_REGISTERS[pa_slice].COMPARE.B = count_top + shift
 
-    # store.set(PACKAGE_TOP, top)
-    # store.set(PACKAGE_COUNT, count)
+    store.set(PACKAGE_TOP, round(package_top / pu_wrap))
+    store.set(PACKAGE_COUNT, max(1, round(count_top / pu_wrap)))
 
     set_pwm_channels([
-      get_pins_slice(self.pin_pulse),
-      get_pins_slice(self.pin_package),
+      (get_pins_slice(self.pin_pulse), 0),
+      (get_pins_slice(self.pin_package), shift),
     ], 1)
 
   def _create_pulse_package_pwm_group(self):
@@ -405,9 +360,9 @@ class Pwm(UIListProgram):
 
   def restart_push_pull(self):
     slices = [
-      get_pins_slice(self.pin_push_pull_one),
-      get_pins_slice(self.pin_push_pull_two),
-      get_pins_slice(self.pin_push_pull_offset)
+      (get_pins_slice(self.pin_push_pull_one), 0),
+      (get_pins_slice(self.pin_push_pull_two), 0),
+      (get_pins_slice(self.pin_push_pull_offset), 0)
     ]
 
     set_pwm_channels(slices, 1)

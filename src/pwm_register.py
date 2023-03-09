@@ -46,10 +46,10 @@ PWM_ENR = uctypes.bytearray_at(PWM_BASE + PWM_EN, 4)
 def set_pwm_channels(channels, en):
   en_reg = PWM_ENR[0]
   for channel in channels:
-    # print("SET PWM Channel:", channel)
+    channel, shift = channel
     if en:
       PWM_REGISTERS[channel].CSR.EN = 0
-      PWM_REGISTERS[channel].COUNTER.COUNTER = 0
+      PWM_REGISTERS[channel].COUNTER.COUNTER = shift
 
       en_reg |= (1 << channel)
 
