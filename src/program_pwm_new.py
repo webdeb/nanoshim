@@ -1,417 +1,319 @@
 """
 New:
 1. Change the freq and output the real freq. ✅
-2. Use ns for duty to adjust the impuls as good as possible
-3. [Functional] Sync Package to pulse.
-  A: Make the package always a multiple of pulse
-  B: The Duty of the package must not cut the last pulse
+2. Use ns for duty to adjust the impuls as good as possible ✅
+3. [Functional] Sync Package to pulse. ✅
+  A: Make the package always a multiple of pulse ✅
+  B: The Duty of the package must not cut the last pulse ✅
 4. UX Rotary left should increment exp, and Rot right should decrement exp. ✅
 """
-import math
+
+"""
+1. Align Pulse, Package and Big Package
+2. Shift Pulse
+3. Align Push Pull to inverted Package and its duty (which is the Push Pull offset)
+4. Align Push A and Pull B 
+"""
 from machine import PWM, Pin
 from store import (
   store,
   PULSE_FREQ,
   PULSE_DUTY,
-  PACKAGE_FREQ,
-  PACKAGE_DUTY,
-  PACKAGE_TOP,
+  # 
+  PACKAGE_LEN,
   PACKAGE_COUNT,
-  PACKAGE_SHIFT,
-  PUSHPULL_MODE,
-  PUSHPULL_FREQ,
-  PUSHPULL_DUTY_ONE,
-  PUSHPULL_DUTY_TWO,
-  PUSHPULL_DUTY_OFFSET,
-  PUSHPULL_MODE_SYNC,
-  PUSHPULL_MODE_ADJUST,
+  # PACKAGE_SHIFT,
+  BIGPACK_LEN,
+  BIGPACK_COUNT,
+  # PUSHPULL_SHIFT,
+  # PUSHPULL_MODE,
+  # PUSHPULL_FREQ,
+  # PUSHPULL_DUTY_A,
+  # PUSHPULL_DUTY_B,
+  # PUSHPULL_OFFSET_B,
+  # PUSHPULL_MODE_SYNC,
+  # PUSHPULL_MODE_ADJUST,
 )
-from ui_program import UIListProgram
+from ui_program import (
+  UIListProgram,
+  TAP_LEFT
+)
 from rotary import Rotary
 from pwm_register import (
   set_pwm_channels,
-  set_channel_inverted,
+  # set_channel_inverted,
   increase_top,
   decrease_top,
   PWM_REGISTERS,
 )
 
+PIN = 0
+SLICE = 1
+CHANNEL = 2
+MAX = 65535
+MIN = 1
+
 class Pwm(UIListProgram):
   # Pulse & Package
-  pin_pulse = 10
-  pin_package = 14
+  pulse = (10, 5, "A")
+  package = (14, 7, "A")
 
   # Push & Pull
-  pin_push_pull_one = 9
-  pin_push_pull_two = 7
-  pin_push_pull_offset = 6
+  bigpack = (9, 4, "B")
+  bigpack_inv = (8, 4, "A")
+
+  pushpull_a = (6, 3, "A")
+  pushpull_b = (7, 3, "B")
 
   max_freq_exp = 7 # 1Mhz.
   max_duty_exp = 3 # 10000ns = 10ms
   
-  title = "HACK PWM v0.0.1"
+  title = "HACK PWM v0.0.3"
+
   pwm_exp = {
     "pulse_freq": 3,
     "pulse_duty": 2,
-    "pulse_shift": 1,
-    "package_freq": 3,
-    "package_duty": 2,
-    "pushpull_freq": 3,
-    "pushpull_duty_one": 2,
-    "pushpull_duty_two": 2,
-    "pushpull_duty_offset": 2,
+    # "pulse_shift": 1,
+    # "package_freq": 3,
+    # "package_duty": 2,
+    # "pushpull_freq": 3,
+    # "pushpull_duty_one": 2,
+    # "pushpull_duty_two": 2,
+    # "pushpull_duty_offset": 2,
   }
   pwms = {}
 
   def __init__(self, on_exit):
     self.handle_button = on_exit
     self.default_items = [
-      # Pulse Package
+      # """
+      # Pulse
+      # """
       {
-        "text": ["Freq:", lambda: str(store.get(PULSE_FREQ))],
+        "text": [["F:", self.get_exp("pulse_freq")], lambda: str(store.get(PULSE_FREQ))],
         "handle_change": lambda event: self.change_pulse_freq(event),
-        "exp": "pulse_freq", 
       },
       {
-        "text": ["Duty:", lambda: str(store.get(PULSE_DUTY)) + 'ns'],
+        "text": [["Duty:", self.get_exp("pulse_duty")], lambda: str(store.get(PULSE_DUTY))],
         "handle_change": lambda event: self.change_pulse_duty(event),
-        "exp": "pulse_duty", 
       },
+
+      # """
+      # Package
+      # """
       {
-        "text": ["Package:", lambda: str(store.get(PACKAGE_TOP))],
-        "handle_change": lambda event: self.change_package_freq(event),
+        "text": ["Package:", lambda: str(store.get(PACKAGE_LEN))],
+        "handle_change": lambda event: self.change_package_length(event),
       },
       {
         "text": ["Count:", lambda: str(store.get(PACKAGE_COUNT))],
-        "handle_change": lambda event: self.change_package_duty(event),
+        "handle_change": lambda event: self.change_package_count(event),
+      },
+
+      # """
+      # BigPack
+      # """
+      {
+        "text": ["BigPack:", lambda: str(store.get(BIGPACK_LEN))],
+        "handle_change": lambda event: self.change_bigpack_length(event),
       },
       {
-        "text": ["Shift:", lambda: str(store.get(PACKAGE_SHIFT))],
-        "handle_change": lambda event: self.change_package_shift(event),
-        "exp": "pulse_shift", 
+        "text": ["Count:", lambda: str(store.get(BIGPACK_COUNT))],
+        "handle_change": lambda event: self.change_bigpack_count(event),
       },
-      # # Push - Pull
-      # # 
+
+      # """
+      # PushPull
+      # """
       # {
-      #   "text": "Push & Pull",
-      #   "selectable": False,
+      #   "text": ["Push Pull Mode:", lambda: str(store.get(PUSHPULL_MODE))],
+      #   "handle_change": lambda event: self.change_push_pull_mode(event),
       # },
-      {
-        "text": ["PP Mode:", lambda: str(store.get(PUSHPULL_MODE))],
-        "handle_change": lambda event: self.change_push_pull_mode(event),
-      },
-      {
-        "text": ["Freq:", lambda: str(round(store.get(PUSHPULL_FREQ)))],
-        "handle_change": lambda event: self.change_push_pull_freq(event),
-        "exp": "pushpull_freq",
-      },
-      {
-        "text": ["Duty 1:", lambda: str(round(store.get(PUSHPULL_DUTY_ONE)))+ "/oo"],
-        "handle_change": lambda event: self.change_push_pull_duty("one", event),
-        "exp": "pushpull_duty_one",
-      },
-      {
-        "text": ["Duty 2:", lambda: str(round(store.get(PUSHPULL_DUTY_TWO)))+ "/oo"],
-        "handle_change": lambda event: self.change_push_pull_duty("two", event),
-        "exp": "pushpull_duty_two",
-      },
-      {
-        "text": ["Offset:", lambda: str(round(store.get(PUSHPULL_DUTY_OFFSET)))+ "/oo"],
-        "handle_change": lambda event: self.change_push_pull_duty("offset", event),
-        "exp": "pushpull_duty_offset",
-      },
+      # {
+      #   "text": ["Shift:", lambda: str(round(int(store.get(PUSHPULL_SHIFT))))],
+      #   "handle_change": lambda event: self.change_push_pull_duty("offset", event),
+      # },
+      # {
+      #   "text": ["PP:", lambda: str(round(int(store.get(PUSHPULL_FREQ))))],
+      #   "handle_change": lambda event: self.change_push_pull_freq(event),
+      # },
+      # {
+      #   "text": ["Duty:", lambda: str(round(int(store.get(PUSHPULL_DUTY_A)))) + "/ns"],
+      #   "handle_change": lambda event: self.change_push_pull_duty("one", event),
+      # },
+      # {
+      #   "text": ["B Duty:", lambda: str(round(int(store.get(PUSHPULL_DUTY_B)))) + "/ns"],
+      #   "handle_change": lambda event: self.change_push_pull_duty("two", event),
+      # },
     ]
 
     self._set_items_based_on_mode()
-    self._create_push_pull_pwm_group()
-    self._create_pulse_package_pwm_group()
+    self._init_pwms()
 
     super().__init__()
+
+  def get_exp(self, exp_name):
+    return lambda: "x" + str(self.pwm_exp[exp_name] + 1)
 
   def _set_items_based_on_mode(self):
-    if (store.get(PUSHPULL_MODE) == PUSHPULL_MODE_SYNC):
-      self.items = self.default_items[0:-2]
-    else:
-      self.items = self.default_items
-    
-    super().__init__()
+    self.items = self.default_items
 
   def render(self):
     items_text = list(map(lambda i: i["text"], self.items))
-    exp = None
-
-    if ("exp" in self.default_items[self.selected_item]):
-      exp = self.pwm_exp[self.default_items[self.selected_item]["exp"]]
-
-    self.display.render_menu(self.title, items_text, self.selected_item, exp)
+    self.display.render_menu(self.title, items_text, self.selected_item)
 
   def change_pulse_freq(self, event):
-    pwm = "pulse"
-    new_freq = store.get(f"system.{pwm}.freq")
-    exp = self.pwm_exp[f"{pwm}_freq"]
+    new_freq = store.get(PULSE_FREQ)
+    exp = self.pwm_exp["pulse_freq"]
 
     if (event == Rotary.TAP):
-      self.pwm_exp[f"{pwm}_freq"] = (exp - 1) % self.max_freq_exp
+      self.pwm_exp["pulse_freq"] = (exp - 1) % self.max_freq_exp
+      return self.render()
+    if (event == TAP_LEFT):
+      self.pwm_exp["pulse_freq"] = (exp + 1) % self.max_freq_exp
       return self.render()
     elif (event == Rotary.INC):
       new_freq += (10 ** exp)
     elif (event == Rotary.DEC):
       new_freq -= (10 ** exp)
+    else:
+      return
 
-    # change the setting, the pwm will cannot handle every adjustment..
-    # but the setting will increase, and eventually the pwm too.
-    new_freq = max(2_000, min(5_000_000, new_freq))
+    store.set(PULSE_FREQ, ensure_between(new_freq))
 
-    old_freq = self.pwms[pwm].freq()
-    self.pwms[pwm].freq(new_freq)
-    new_freq = self.pwms[pwm].freq()
-
-    # If freq did not changed, but can be changed, repeat.
-    if (old_freq == new_freq and 2_000 < new_freq < 5_000_000):
-      pin = Pwm.__dict__["pin_" + pwm]
-      if (event == Rotary.INC):
-        # When we are increasing the freq, the top value needs to be decreased
-        decrease_top(pin)
-      else:
-        increase_top(pin)
-      
-    # We need to do it again, so MP can adjust the duty.
-    new_freq = self.pwms[pwm].freq()
-    self.pwms[pwm].freq(new_freq)
-
-    store.set(f"system.{pwm}.freq", new_freq)
-
-    self.align_package_to_pulse()
+    self.restart_driver()
     self.render()
 
   def change_pulse_duty(self, event):
-    pwm = "pulse"
-    new_duty = store.get(f"system.{pwm}.duty")
-    exp = self.pwm_exp[f"{pwm}_duty"]
+    new_duty = int(store.get(PULSE_DUTY))
+    pulse_top = int(store.get(PULSE_FREQ))
+    exp = self.pwm_exp["pulse_duty"]
 
-    if (event == Rotary.TAP):
-      self.pwm_exp[f"{pwm}_duty"] = (exp - 1) % self.max_duty_exp
+    if (event == TAP_LEFT):
+      self.pwm_exp["pulse_duty"] = (exp + 1) % self.max_duty_exp
+      return self.render()
+    elif (event == Rotary.TAP):
+      self.pwm_exp["pulse_duty"] = (exp - 1) % self.max_duty_exp
       return self.render()
     elif (event == Rotary.INC):
-      new_duty += 10 ** exp
+      new_duty += (10 ** exp)
     elif (event == Rotary.DEC):
-      new_duty -= 10 ** exp
+      new_duty -= (10 ** exp)
+    else:
+      return
 
     # change the setting, the pwm will cannot handle every adjustment..
     # but the setting will increase, and eventually the pwm too.
-    self.pwms[pwm].duty_ns(new_duty)
-    store.set(f"system.{pwm}.duty", self.pwms[pwm].duty_ns())
-    self.align_package_to_pulse()
+    store.set(PULSE_DUTY, ensure_between(new_duty, 0, pulse_top + 1))
+
+    self.restart_driver()
     self.render()
 
+  def change_package_length(self, event):
+    top = int(store.get(PACKAGE_LEN))
 
-  def change_package_freq(self, event):
-    top = int(store.get(PACKAGE_TOP))
     if (event == Rotary.INC):
-      top += 1
+      top = top + 1
     elif (event == Rotary.DEC):
-      top -= 1
+      top = top - 1
 
-    store.set(PACKAGE_TOP, top)
-    self.align_package_to_pulse(event)
+    store.set(PACKAGE_LEN, top)
+    self.restart_driver()
     self.render()
 
-  def change_package_duty(self, event):
+  def change_package_count(self, event):
     count = int(store.get(PACKAGE_COUNT))
+
+    if (event == Rotary.INC):
+      count = min(1000, count + 1)
+    elif (event == Rotary.DEC):
+      count = max(1, count - 1)
+
+    store.set(PACKAGE_COUNT, count)
+    self.restart_driver()
+    self.render()
+
+  def change_bigpack_length(self, event):
+    length = int(store.get(BIGPACK_LEN))
+
+    if (event == Rotary.INC):
+      length = length + 1
+    elif (event == Rotary.DEC):
+      length = length - 1
+    else:
+      return
+
+    store.set(BIGPACK_LEN, length)
+    self.restart_driver()
+    self.render()
+
+  def change_bigpack_count(self, event):
+    count = int(store.get(BIGPACK_COUNT))
 
     if (event == Rotary.INC):
       count += 1
     elif (event == Rotary.DEC):
       count -= 1
 
-    store.set(PACKAGE_COUNT, count)
-    self.align_package_to_pulse(event)
+    store.set(BIGPACK_COUNT, count)
+    self.restart_driver()
     self.render()
 
-  def change_package_shift(self, event):
-    shift = int(store.get(PACKAGE_SHIFT))
-    exp = self.pwm_exp["pulse_shift"] - 1
+  """
+  Main logic to hold everything together
+  """
+  def restart_driver(self):
+    pulse_cycles     = int(store.get(PULSE_FREQ))
+    pulse_count   = int(store.get(PULSE_DUTY))
 
-    if (event == Rotary.TAP):
-      self.pwm_exp["pulse_shift"] = (self.pwm_exp["pulse_shift"] - 1) % 2
-      return self.render()
-    if (event == Rotary.INC):
-      shift += 10 ** exp
-    elif (event == Rotary.DEC):
-      shift -= 10 ** exp
+    package_len     = int(store.get(PACKAGE_LEN))
+    package_count   = int(store.get(PACKAGE_COUNT))
 
-    store.set(PACKAGE_SHIFT, shift)
-    self.align_package_to_pulse(event)
-    self.render()
+    bigpack_len     = int(store.get(BIGPACK_LEN))
+    bigpack_count   = int(store.get(BIGPACK_COUNT))
 
+    pulse = self.pulse
+    package = self.package
+    bigpack = self.bigpack
 
-  def align_package_to_pulse(self, event=None):
-    pu_slice = get_pins_slice(self.pin_pulse)
-    pa_slice = get_pins_slice(self.pin_package)
-    pa_channel = get_pins_channel(self.pin_package)
-
-    top = int(store.get(PACKAGE_TOP))
-    count = int(store.get(PACKAGE_COUNT))
-
-    top_count_relation = count/max(1, top)
-
-    pu_wrap = PWM_REGISTERS[pu_slice].TOP.WRAP + 1
-    # pa_wrap = PWM_REGISTERS[pa_slice].TOP.WRAP + 1
-
-    # calculate the optimal package_top
-    package_top = max(0, min(pu_wrap * top, 65536))
-    count_top = max(0, min(count * pu_wrap, package_top))
-    shift = int(store.get(PACKAGE_SHIFT))
-
-    # If changed set..
-    PWM_REGISTERS[pa_slice].TOP.WRAP = package_top - 1
-    if (pa_channel == "A"):
-      PWM_REGISTERS[pa_slice].COMPARE.A = count_top + shift
-    else:
-      PWM_REGISTERS[pa_slice].COMPARE.B = count_top + shift
-
-    store.set(PACKAGE_TOP, round(package_top / pu_wrap))
-    store.set(PACKAGE_COUNT, max(1, round(count_top / pu_wrap)))
+    package_cycles = ensure_between(pulse_cycles * package_len)
+    package_compare = ensure_between(pulse_cycles * package_count)
+    bigpack_cycles = ensure_between(package_cycles * bigpack_len)
+    bigpack_compare = ensure_between(bigpack_count * package_cycles)
 
     set_pwm_channels([
-      (get_pins_slice(self.pin_pulse), 0),
-      (get_pins_slice(self.pin_package), shift),
+      (pulse[SLICE], 0),
+      (package[SLICE], 0),
+      (bigpack[SLICE], 0),
+    ], 0)
+
+    """
+    Package & Bigpack
+    """
+    bigpack_slice = bigpack[SLICE]
+    PWM_REGISTERS[bigpack_slice].TOP.WRAP = bigpack_cycles - 1
+    PWM_REGISTERS[bigpack_slice].COMPARE.B = bigpack_compare
+
+    package_slice = package[SLICE]
+    PWM_REGISTERS[package_slice].TOP.WRAP = package_cycles - 1
+    PWM_REGISTERS[package_slice].COMPARE.A = package_compare
+
+    pulse_slice = pulse[SLICE]
+    PWM_REGISTERS[pulse_slice].TOP.WRAP = pulse_cycles - 1
+    PWM_REGISTERS[pulse_slice].COMPARE.A = pulse_count
+
+    set_pwm_channels([
+      (pulse[SLICE], 0),
+      (package[SLICE], 0),
+      (bigpack[SLICE], 0),
     ], 1)
 
-  def _create_pulse_package_pwm_group(self):
-    self.pwms["pulse"] = self._create_pwm(self.pin_pulse, store.get(PULSE_FREQ))
-    self.pwms["pulse"].duty_ns(store.get(PULSE_DUTY))
-    self.pwms["package"] = self._create_pwm(self.pin_package)
-    self.pwms["package"].duty_u16()
+  def _init_pwms(self):
+    self.pwms["pulse"] =  PWM(Pin(self.pulse[PIN]))
+    self.pwms["package"] =  PWM(Pin(self.package[PIN]))
+    self.pwms["bigpack"] =  PWM(Pin(self.bigpack[PIN]))
 
-    self.align_package_to_pulse()
+    self.restart_driver()
 
-  """
-  PUSH & PULL
-  """
-
-  def change_push_pull_mode(self, event):
-    if (store.get(PUSHPULL_MODE) == PUSHPULL_MODE_SYNC):
-      store.set(PUSHPULL_MODE, PUSHPULL_MODE_ADJUST)
-    else:
-      store.set(PUSHPULL_MODE, PUSHPULL_MODE_SYNC)
-
-    self.set_push_pull_duty_by_mode()
-    self._set_items_based_on_mode()
-
-  def change_push_pull_freq(self, event):
-    new_freq = store.get(f"system.push_pull.freq")
-    exp = self.pwm_exp["pushpull_freq"]
-
-    if (event == Rotary.TAP):
-      self.pwm_exp["pushpull_freq"] = (exp + 1) % self.max_freq_exp
-      return self.render()
-    elif (event == Rotary.INC):
-      new_freq += (10 ** exp)
-    elif (event == Rotary.DEC):
-      new_freq -= (10 ** exp)
-
-    self._set_pwms_freq([
-      self.pwms["push_pull_one"],
-      self.pwms["push_pull_two"],
-      self.pwms["push_pull_offset"],
-    ], new_freq)
-
-    store.set("system.push_pull.freq", new_freq)
-    self.restart_push_pull()
-    self.render()
-
-  def change_push_pull_duty(self, pwm, event):
-    duty_path = f"system.push_pull.duty_{pwm}"
-    new_duty = store.get(duty_path)
-    exp_key = f"pushpull_duty_{pwm}"
-    exp = self.pwm_exp[exp_key]
-
-    if (event == Rotary.TAP):
-      self.pwm_exp[exp_key] = (exp - 1) % self.max_duty_exp
-      return self.render()
-    elif (event == Rotary.INC):
-      new_duty += (10 ** exp)
-    elif (event == Rotary.DEC):
-      new_duty -= (10 ** exp)
-
-    new_duty = max(0, min(1000, new_duty))
-    store.set(duty_path, new_duty)
-    self.set_push_pull_duty_by_mode()
-    self.render()
-
-  def _create_push_pull_pwm_group(self):
-    freq = store.get(PUSHPULL_FREQ)
-
-    self.pwms["push_pull_one"] = self._create_pwm(self.pin_push_pull_one, freq)
-    self.pwms["push_pull_two"] = self._create_pwm(self.pin_push_pull_two, freq)
-    self.pwms["push_pull_offset"] = self._create_pwm(self.pin_push_pull_offset, freq)
-
-    set_channel_inverted(
-      get_pins_slice(self.pin_push_pull_two),
-      get_pins_channel(self.pin_push_pull_two)
-    )
-
-    # Start pwms..
-    self.restart_push_pull()
-    
-    # Set duty
-    self.set_push_pull_duty_by_mode()
-
-  def restart_push_pull(self):
-    slices = [
-      (get_pins_slice(self.pin_push_pull_one), 0),
-      (get_pins_slice(self.pin_push_pull_two), 0),
-      (get_pins_slice(self.pin_push_pull_offset), 0)
-    ]
-
-    set_pwm_channels(slices, 1)
-
-  def rotary_one_handler(self, event):
-    if (event == Rotary.TAP):
-      if ("exp" in self.items[self.selected_item]):
-        self.pwm_exp[self.items[self.selected_item]["exp"]] += 1
-        self.render()
-    else:
-      super().rotary_one_handler(event)
-
-  def set_push_pull_duty_by_mode(self):
-    mode = store.get(PUSHPULL_MODE) # ADJUST / SYNC
-    duty_push_pull_one = store.get(PUSHPULL_DUTY_ONE)
-
-    if (mode == PUSHPULL_MODE_SYNC):
-      duty_push_pull_two = 500 # 50% 
-      duty_push_pull_offset = duty_push_pull_two + duty_push_pull_one
-    elif (mode == PUSHPULL_MODE_ADJUST):
-      duty_push_pull_two = store.get(PUSHPULL_DUTY_OFFSET)
-      duty_push_pull_offset = store.get(PUSHPULL_DUTY_TWO) + duty_push_pull_two
-
-    self.pwms["push_pull_one"].duty_u16(round(65535 * duty_push_pull_one / 1000))
-    self.pwms["push_pull_two"].duty_u16(round(65535 * duty_push_pull_two / 1000))
-    self.pwms["push_pull_offset"].duty_u16(round(65535 * duty_push_pull_offset / 1000))
-
-  def _create_pwm(self, pin, freq=False):
-    pwm = PWM(Pin(pin))
-    if (freq):
-      pwm.freq(freq)
-
-    return pwm
-
-  def _set_pwms_freq(self, pwms, freq):
-    if (isinstance(pwms, PWM)):
-      pwms = [pwms]
-
-    for pwm in pwms:
-      pwm.freq(freq)
-
-  def _fill_pwm_settings(self):    
-    self.pwm_exp["push_pull_freq"] = 4
-    self.pwm_exp["push_pull_duty_one"] = 2
-    self.pwm_exp["push_pull_duty_two"] = 4
-    self.pwm_exp["push_pull_duty_offset"] = 4
-
-def get_pins_slice(pin):
-  return pin // 2 % 8
-    
-def get_pins_channel(pin):
-  return "A" if pin % 2 == 0 else "B"
+def ensure_between(value, min_v = MIN, max_v = MAX):
+  return int(max(min_v, min(max_v, value)))

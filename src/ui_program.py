@@ -3,6 +3,8 @@ from display import display
 from rotary import Rotary
 import machine
 
+TAP_LEFT = 5
+
 class UIListProgram:
   rotary_one = user_inputs.ENCODER_LEFT
   rotary_two = user_inputs.ENCODER_RIGHT
@@ -13,6 +15,9 @@ class UIListProgram:
   selected_item = 0
 
   def __init__(self):
+    self.set_items_text()
+
+  def set_items_text(self):
     self.items_text = list(map(lambda i: i["text"], self.items))
 
   def active(self, active):
@@ -31,12 +36,18 @@ class UIListProgram:
       self.selected_item = (self.selected_item + 1) % len(self.items)
     elif (event == Rotary.DEC):
       self.selected_item = (self.selected_item - 1) % len(self.items)
+    elif (event == Rotary.TAP):
+      self.rotary_two_handler(TAP_LEFT)
+    else:
+      return
 
     self.render()
 
   def rotary_two_handler(self, event):
     if ("handle_change" in self.items[self.selected_item]):
       self.items[self.selected_item]["handle_change"](event)
+    else:
+      return
 
     self.render()
 
