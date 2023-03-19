@@ -4,6 +4,9 @@ from rotary import Rotary
 import machine
 
 TAP_LEFT = 5
+TAP_RIGHT = Rotary.TAP
+INC = Rotary.INC
+DEC = Rotary.DEC
 
 class UIListProgram:
   rotary_one = user_inputs.ENCODER_LEFT
