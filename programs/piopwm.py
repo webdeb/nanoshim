@@ -1,17 +1,23 @@
 from rp2 import PIO, asm_pio, StateMachine
+import pwm.piopwm_store as store
 from machine import Pin
 import machine
-import storecopy as store
 
+"""
+Multi pwm Settings..
+"""
 pin_f1 = Pin(14)
 pin_f2 = Pin(11)
-pin_package = Pin(15)
+pin_package = Pin(10)
 pin_bigpack = Pin(13)
 
 F1 = "f1"
 F2 = "f2"
 PACKAGE = "package"
 BIGPACK = "bigpack"
+"""
+Multi pwm settings end
+"""
 
 DUTY_MODES = [
   store.DUTY_CYCLES,
@@ -19,66 +25,68 @@ DUTY_MODES = [
 ]
 
 # ALL PWM Programms have the same default min LOW/HIGH/PERIOD
-LOW = 4;
+LOW = 5
 HIGH = 1;
 PERIOD = LOW + HIGH
 
-@asm_pio(sideset_init=PIO.OUT_LOW)
-def pwm_with_pin_program_high_low():
-  wrap_target()
-  mov(x, osr)                      # l
-  mov(y, isr)                      # l
-  wait(1, pin, 0)                  # l
-  label("high")
-  jmp(y_dec, "high")  .side(1)     # h + y
-  label("low")
-  jmp(x_dec, "low")   .side(0)     # l + x
-  wrap()
 
-@asm_pio(sideset_init=PIO.OUT_LOW)
-def pwm_with_pin_program_low_high():
-  wrap_target()
-  mov(x, osr)                      # l
-  mov(y, isr)                      # l
-  wait(1, pin, 0)                  # l
-  label("low")
-  jmp(x_dec, "low")   .side(0)     # l + x
-  label("high")
-  jmp(y_dec, "high")  .side(1)     # h + y
-  wrap()
+@asm_pio(sideset_init=PIO.OUT_LOW, autopull=True)
+def pwm_program():
+  label("load")
+  out(isr, 32)
+  out(null, 32)
 
-@asm_pio(sideset_init=PIO.OUT_LOW)
-def pwm_program_high_low():
   wrap_target()
+
   mov(x, osr)                      # l
   mov(y, isr)                  [1] # 2xl just to have the same low periods
+  jmp(not_y, "load")               # l (dont care about "load" delay)
+
   label("high")
   jmp(y_dec, "high")  .side(1)     # h + y
   label("low")
   jmp(x_dec, "low")   .side(0)     # l + x
+
   wrap()
 
-class PIOPWM:
+@asm_pio(sideset_init=PIO.OUT_LOW, autopull=True)
+def pwm_with_pin_program():
+  label("load")
+  out(isr, 32)
+  out(null, 32)
+
+  wrap_target()
+
+  mov(y, isr)                      # l
+  mov(x, osr)                      # l
+  jmp(not_y, "load")               # l
+
+  wait(1, pin, 0)                  # l
+  label("high")
+  jmp(y_dec, "high")  .side(1)     # h + y
+  label("low")
+  jmp(x_dec, "low")   .side(0)     # l + x
+
+  wrap()
+
+class MULTIPWM:
   pwm = {}
   def __init__(self):
     # Cleanup memory
     PIO(0).remove_program()
 
-    self.pwm[F1] = StateMachine(0, pwm_with_pin_program_high_low, in_base=pin_package, sideset_base=pin_f1, freq=125_000_000)
-    self.set_period(F1, store.get_period(F1))
-    self.set_duty(F1, store.get_duty(F1))
+    self.pwm[F1] = StateMachine(0, pwm_with_pin_program, in_base=pin_package, sideset_base=pin_f1, freq=125_000_000)
+    self.update(F1)
 
-    self.pwm[F2] = StateMachine(1, pwm_with_pin_program_low_high, in_base=pin_f1, sideset_base=pin_f2, freq=125_000_000)
-    self.set_period(F2, store.get_period(F2))
-    self.set_duty(F2, store.get_duty(F2))
+    self.pwm[F2] = StateMachine(1, pwm_with_pin_program_inverted, in_base=pin_f1, sideset_base=pin_f2, freq=125_000_000)
+    sm_pwm_set_params(self.pwm[F2], store.get_high(self.pwm[F2]),  store.get_low(self.pwm[F2]))
+    self.pwm[F2].active(1)
 
-    self.pwm[PACKAGE] = StateMachine(2, pwm_with_pin_program_high_low, in_base=pin_bigpack, sideset_base=pin_package, freq=125_000_000)
-    self.set_period(PACKAGE, store.get_period(PACKAGE))
-    self.set_duty(PACKAGE, store.get_duty(PACKAGE))
+    self.pwm[PACKAGE] = StateMachine(2, pwm_with_pin_program, in_base=pin_bigpack, sideset_base=pin_package, freq=125_000_000)
+    self.update(PACKAGE)
 
-    self.pwm[BIGPACK] = StateMachine(3, pwm_program_high_low, sideset_base=pin_bigpack, freq=125_000_000)
-    self.set_period(BIGPACK, store.get_period(BIGPACK))
-    self.set_duty(BIGPACK, store.get_duty(BIGPACK))
+    self.pwm[BIGPACK] = StateMachine(3, pwm_program, sideset_base=pin_bigpack, freq=125_000_000)
+    self.update(BIGPACK)
 
   def get_duty_str(self, pwm):
     pwm_duty_mode = store.get_duty_mode(pwm)
@@ -133,47 +141,39 @@ class PIOPWM:
     duty = store.get_duty(pwm)
     x = period - duty
 
-    sm_pwm_set_params(self.pwm[pwm], x, duty)
+    sm = self.pwm[pwm]
+    sm_pwm_set_params(sm, x, duty)
+    sm.active(1)
 
   def update_period(self, pwm, inc, factor):
     period = store.get_period(pwm)
-    if (inc < 0 and factor > period):
-      # perform update, but use the period as factor
-      return self.update_period(pwm, inc, period)
-
     new_period = period + (10**factor) * inc
-    if (pwm == F1):
-      package_period = store.get_period(PACKAGE)
-      new_period = min(package_period, new_period)
-    if (pwm == PACKAGE):
-      bigpack_period = store.get_period(BIGPACK)
-      new_period = min(bigpack_period, new_period)
-
     new_period = max(1, new_period)
     self.set_period(pwm, new_period)
 
   def update_duty(self, pwm, inc, factor):
     duty = store.get_duty(pwm)
     new_duty = duty + (10**factor) * inc
-    if (pwm == F1):
-      package_duty = store.get_duty(PACKAGE)
-      new_duty = min(package_duty, new_duty)
-    if (pwm == PACKAGE):
-      bigpack_duty = store.get_duty(BIGPACK)
-      new_duty = min(bigpack_duty, new_duty)
-
     new_duty = max(1, new_duty)
     self.set_duty(pwm, new_duty)
 
-def sm_pwm_set_params(sm, high, low):
-    sm_pwm_set_high(sm, high)
-    sm_pwm_set_low(sm, low)
+  def update_low(self, pwm, inc, factor):
+    low = store.get_low(pwm) + inc * factor
+    store.set_low(pwm, low)
+    sm_pwm_set_params(self.pwm[pwm], store.get_high(pwm), low)
 
-def sm_pwm_set_low(sm, low):
-    sm.put(low)
-    sm.exec("pull()")
+  def update_high(self, pwm, inc, factor):
+    high = store.get_high(pwm) + inc * factor
+    store.set_high(pwm, high)
+    sm_pwm_set_params(self.pwm[pwm], high, store.get_low(pwm))
 
-def sm_pwm_set_high(sm, high):
-    sm.put(high)
-    sm.exec("pull()")
-    sm.exec("mov(isr, osr)")
+  def get_low(self, pwm):
+    return store.get_low(pwm)
+
+  def get_high(self, pwm):
+    return store.get_high(pwm)
+  
+def sm_pwm_set_params(sm, low, high):
+  sm.put(high)
+  sm.put(low)
+  sm.exec("in_(null, 32)") # clear isr which forces a jump to "load"

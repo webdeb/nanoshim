@@ -23,7 +23,7 @@ from ui_program import (
   DEC,
 )
 
-from piopwm import (
+from pwm.piopwm import (
   PIOPWM,
   F1,
   F2,
@@ -32,15 +32,15 @@ from piopwm import (
 )
 
 class Pwm(UIListProgram):
-  max_freq_exp = 7 # 1Mhz.
-  max_duty_exp = 7 # 10000ns = 10ms
+  max_freq_exp = 2 # 1Mhz. 1tick.. 2-10%, 3,50%
+  max_duty_exp = 2 # 10000ns = 10ms
   
   title = "HACK PWM v0.0.3"
   pwm_exp = {
     "f1_freq": 0,
     "f1_duty": 0,
-    "f2_phase": 0,
-    "f2_len": 0,
+    "f2_low": 0,
+    "f2_high": 0,
     "package_freq": 0,
     "package_duty": 0,
     "bigpack_freq": 0,
@@ -66,12 +66,12 @@ class Pwm(UIListProgram):
       # F2
       # """
       {
-        "text": [["F2:", self.get_exp("f2_freq")], self.get_duty_str(F2)],
-        "handle_change": lambda event: self.change_freq(F1, event),
+        "text": [["F2:", self.get_exp("f2_freq")], self.get_freq_str(F2)],
+        "handle_change": lambda event: self.change_freq(F2, event),
       },
       {
-        "text": [["Duty:", self.get_exp("f2_duty")], self.get_duty_str(F2)],
-        "handle_change": lambda event: self.change_duty(F1, event),
+        "text": [["High:", self.get_exp("f2_high")], lambda: str(self.piopwm.get_high(F2))],
+        "handle_change": lambda event: self.change_duty(F2, event),
       },
 
       # """
@@ -96,7 +96,7 @@ class Pwm(UIListProgram):
       {
         "text": [["Duty:", self.get_exp("bigpack_duty")], self.get_duty_str(BIGPACK)],
         "handle_change": lambda event: self.change_duty(BIGPACK, event),
-      },
+      }
     ]
 
     self.piopwm = PIOPWM()
@@ -108,7 +108,8 @@ class Pwm(UIListProgram):
     return lambda: freq_to_str(self.piopwm.get_freq(pwm))
   def get_duty_str(self, pwm):
     return lambda: self.piopwm.get_duty_str(pwm)
-
+  def get_low(self, pwm):
+    return lambda: str(self.piopwm.get_low(pwm))
   def render(self):
     items_text = list(map(lambda i: i["text"], self.items))
     self.display.render_menu(self.title, items_text, self.selected_item)
@@ -146,6 +147,42 @@ class Pwm(UIListProgram):
       self.piopwm.update_duty(pwm, 1, exp)
     elif (event == DEC):
       self.piopwm.update_duty(pwm, -1, exp)
+
+    self.render()
+
+  def change_low(self, pwm, event):
+    exp_key = pwm + "_low"
+    if (exp_key not in self.pwm_exp):
+      self.pwm_exp[exp_key] = 0
+
+    exp = self.pwm_exp[exp_key]
+
+    if (event == INC):
+      self.piopwm.update_low(pwm, 1, exp)
+    elif (event == DEC):
+      self.piopwm.update_low(pwm, -1, exp)
+    elif (event == TAP_RIGHT):
+      self.pwm_exp[exp_key] = (exp + 1) % self.max_duty_exp
+    elif (event == TAP_LEFT):
+      self.pwm_exp[exp_key] = (exp - 1) % self.max_duty_exp
+
+    self.render()
+
+  def change_high(self, pwm, event):
+    exp_key = pwm + "_high"
+    if (exp_key not in self.pwm_exp):
+      self.pwm_exp[exp_key] = 0
+
+    exp = self.pwm_exp[exp_key]
+
+    if (event == INC):
+      self.piopwm.update_high(pwm, 1, exp)
+    elif (event == DEC):
+      self.piopwm.update_high(pwm, -1, exp)
+    elif (event == TAP_RIGHT):
+      self.pwm_exp[exp_key] = (exp + 1) % self.max_duty_exp
+    elif (event == TAP_LEFT):
+      self.pwm_exp[exp_key] = (exp - 1) % self.max_duty_exp
 
     self.render()
 

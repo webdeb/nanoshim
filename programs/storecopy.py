@@ -1,9 +1,6 @@
 from simple_json_store import Store
 
-DEFAULT_PATH = "data/storecopy.json"
-
-CONTRAST_PATH         = "settings.contrast"
-MACHINE_FREQ_PATH     = "settings.machine_freq"
+DEFAULT_PATH = "data/piopwm.json"
 
 DUTY_NS = "ns"
 DUTY_CYCLES = "cycles"

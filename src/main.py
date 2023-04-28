@@ -1,7 +1,7 @@
 import uasyncio as asyncio
 from program_menu import MainMenu
 from program_settings import Settings
-from program_pio_pwm import Pwm
+from twofam.program import Program as TwoFAM
 
 async def main():
   print("Start main")
@@ -10,7 +10,7 @@ async def main():
   open_settings = lambda: settings_program.active(1)
 
   # run this first, this is the critical part.
-  pwm_program = Pwm(on_exit=open_menu)
+  pwm_program = TwoFAM(on_exit=open_menu)
   settings_program = Settings(on_exit=open_menu)
 
   main_menu_program = MainMenu({

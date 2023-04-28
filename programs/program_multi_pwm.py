@@ -6,7 +6,7 @@ from ui_program import (
   DEC,
 )
 
-from multipwm import (
+from old.multipwm import (
   MULTIPWM,
   F1,
   F2,

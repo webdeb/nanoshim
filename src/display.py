@@ -1,8 +1,8 @@
 from machine import Pin, I2C
 import framebuf
 import images
-import ssd1306
-from store import store, CONTRAST_PATH
+import lib.ssd1306 as ssd1306
+from display_store import store, CONTRAST_PATH
 
 # specialchars = {}
 # with open('promille.pbm', 'rb') as f:

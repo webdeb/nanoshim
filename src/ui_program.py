@@ -26,7 +26,7 @@ class UIListProgram:
   def active(self, active):
     if active:
       # set button handler to this button handler
-      self.button.irq(handler=self.button_handler, trigger=machine.Pin.IRQ_RISING)
+      self.button.set_handler(self.button_handler)
       self.rotary_one.set_handler(self.rotary_one_handler)
       self.rotary_two.set_handler(self.rotary_two_handler)
       self.render()
@@ -54,7 +54,7 @@ class UIListProgram:
 
     self.render()
 
-  def button_handler(self, _pin):
+  def button_handler(self):
     if ("handle_button" in self.items[self.selected_item]):
       self.items[self.selected_item]["handle_button"]()
     elif (hasattr(self, "handle_button")):

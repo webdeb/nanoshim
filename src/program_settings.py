@@ -1,6 +1,22 @@
 from ui_program import UIListProgram
+from simple_json_store import Store
 from rotary import Rotary
 import machine
+
+"""
+Store
+"""
+CONTRAST_PATH         = "settings.contrast"
+MACHINE_FREQ_PATH     = "settings.machine_freq"
+INIT_STRUCTURE = {
+  "version": 3,
+  "settings": {
+    "contrast": 200,
+    "machine_freq": 125_000_000
+  },
+}
+
+store = Store(path="data/settings_store.json", inital_data=INIT_STRUCTURE)
 
 class Settings(UIListProgram):
   title = "Settings"
@@ -36,7 +52,7 @@ class Settings(UIListProgram):
     return str(self.display.get_contrast())
 
   def handle_contrast_change(self, event):
-    contrast = self.display.get_contrast()
+    contrast = int(self.display.get_contrast())
     if (event == Rotary.INC):
       contrast += 10
     elif (event == Rotary.DEC):
