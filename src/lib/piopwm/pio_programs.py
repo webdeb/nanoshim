@@ -67,3 +67,37 @@ def pwm_program():
   jmp(x_dec, "low")   .side(0)     # l + x
 
   wrap()
+
+
+@asm_pio(sideset_init=(PIO.OUT_LOW, PIO.OUT_LOW))
+def pushpull_program():
+  label("load")
+  pull()
+  out(isr, 32)
+  pull()
+
+  wrap_target()
+
+  mov(y, isr)                       # l 
+  jmp(not_y, "load")                # l
+  mov(x, osr)                   [1] # 2xl
+
+  label("high")
+  jmp(y_dec, "high")    .side(0b01) # h
+  nop()                         [3] # 4h
+  label("low")
+  jmp(x_dec, "low")     .side(0)    # l + x
+
+  # other shoulder..
+  mov(y, isr)                       # l 
+  jmp(not_y, "load")                # l
+  mov(x, osr)                   [1] # 2xl
+
+  label("high_2")
+  jmp(y_dec, "high_2")  .side(0b10) # h
+  nop()                         [3] # 4h
+  label("low_2")
+  jmp(x_dec, "low_2")   .side(0)    # l + x
+
+  wrap()
+
