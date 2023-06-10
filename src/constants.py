@@ -1,0 +1,26 @@
+PIN_GP00 = 0
+PIN_GP01 = 1
+PIN_GP02 = 2
+PIN_GP03 = 3
+PIN_GP04 = 4
+PIN_GP27 = 27
+PIN_GP28 = 28
+
+PIN_ENC_A = 6
+PIN_ENC_B = 5
+PIN_ENC_C = 7
+
+# Display
+PIN_SCL = 15
+PIN_SDA = 14
+
+# Keys
+PIN_KEYS = 26
+
+# Signals TODO
+OUT1 = 13
+OUT2 = 12
+OUT3 = 11
+OUT4 = 10
+OUT5 = 9
+OUT6 = 8
