@@ -5,7 +5,7 @@ import time
 
 class Levels:
     _last_level = None
-    debounce_ms = 200
+    debounce_ms = 1
     none_level = 65000
     callbacks = {}
 
@@ -25,7 +25,7 @@ class Levels:
                 if self.is_level(state, level):
                     # The same level must be hold for some time to trigger,
                     # to avoid spontanous triggering due to static discharges etc.
-                    await asyncio.sleep_ms(5)
+                    # await asyncio.sleep_ms(5)
 
                     if self.is_level(self.adc.read_u16(), level) and await self.release():
                         asyncio.create_task(self._cb(level))
@@ -51,3 +51,20 @@ class Levels:
     def is_level(self, state, level):
         # Determine the correct level by providing a narrow window for the level
         return min(level - 1000, level * 0.8) < state < max(level * 1.2, level + 1000)
+
+
+"""
+Usage (in an asyc context)
+
+SW1 = 3000
+SW2 = 10000
+ADC_PIN = 0
+Buttons = Levels(
+    pin=ADC_PIN,
+    levels=(SW1, SW2),
+    cb=lambda level: print(level)
+)
+
+Buttons.on(SW1, lambda: print("SW1 pressed"))
+Buttons.on(SW2, lambda: print("SW2 pressed"))
+"""

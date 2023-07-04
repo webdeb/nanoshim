@@ -14,13 +14,16 @@ PIN_ENC_C = 7
 PIN_SCL = 15
 PIN_SDA = 14
 
+# LED
+PIN_RGB_LED = 16
+
 # Keys
 PIN_KEYS = 26
 
 # Signals TODO
-OUT1 = 13
-OUT2 = 12
-OUT3 = 11
-OUT4 = 10
-OUT5 = 9
-OUT6 = 8
+OUT1 = 8
+OUT2 = 9
+OUT3 = 10
+OUT4 = 11
+OUT5 = 12
+OUT6 = 13

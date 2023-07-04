@@ -1,22 +1,17 @@
 from rp2 import PIO
 
-from ui_program import (
-    UIListProgram,
-    TAP_LEFT,
-    TAP_RIGHT,
-    INC,
-    DEC,
-)
-
+from lib.ui_program import (UIListProgram)
 from utils import (
     freq_to_str
 )
 
-from lib.piopwm.piopwm import (
+from piopwm.piopwm import (
     PIOPWM,
     WITH_PIN,
     WITH_PIN_INVERTED,
 )
+
+from constants import (OUT1, OUT2, OUT3, OUT4)
 
 import twofam.store as store
 
@@ -26,10 +21,10 @@ F2_PHASE = "f2_phase"
 PACKAGE = "package"
 
 PWMS = {
-    F1:       {"pin": 14, "sm": 0, "with": PACKAGE},
-    F2:       {"pin": 11, "sm": 1, "with": F2_PHASE},
-    F2_PHASE: {"pin": 13, "sm": 2, "with": PACKAGE, "inverted": True},
-    PACKAGE:  {"pin": 10, "sm": 3},
+    PACKAGE:  {"pin": OUT4, "sm": 3},
+    F1:       {"pin": OUT1, "sm": 0, "with": PACKAGE},
+    F2_PHASE: {"pin": OUT3, "sm": 2, "with": PACKAGE, "inverted": True},
+    F2:       {"pin": OUT2, "sm": 1, "with": F2_PHASE},
 }
 
 
@@ -37,7 +32,7 @@ class Program(UIListProgram):
     max_freq_exp = 3  # 1 -> tick.. 2 -> 10%, 3 -> 50%
     max_duty_exp = 3  # 1 -> tick.. 2 -> 10%, 3 -> 50%
 
-    title = "MULTI PWM v0.1.0"
+    title = "2F AM"
     pwm_exp = {
         "f1_freq": 0,
         "f1_duty": 0,
@@ -155,13 +150,13 @@ class Program(UIListProgram):
 
         exp = self.pwm_exp[exp_key]
 
-        if (event == TAP_LEFT):
+        if (event == UIListProgram.MINUS):
             self.pwm_exp[exp_key] = (exp - 1) % self.max_freq_exp
-        if (event == TAP_RIGHT):
+        if (event == UIListProgram.PLUS):
             self.pwm_exp[exp_key] = (exp + 1) % self.max_freq_exp
-        elif (event == INC):
+        elif (event == UIListProgram.INC):
             self.update_period(pwm, -1, exp)
-        elif (event == DEC):
+        elif (event == UIListProgram.DEC):
             self.update_period(pwm, 1, exp)
 
         self.render()
@@ -173,13 +168,15 @@ class Program(UIListProgram):
 
         exp = self.pwm_exp[exp_key]
 
-        if (event == TAP_LEFT):
+        if (event == UIListProgram.TAP):
             self.switch_duty_mode(pwm)
-        elif (event == TAP_RIGHT):
+        elif (event == UIListProgram.PLUS):
             self.pwm_exp[exp_key] = (exp + 1) % self.max_duty_exp
-        elif (event == INC):
+        elif (event == UIListProgram.MINUS):
+            self.pwm_exp[exp_key] = (exp + 1) % self.max_duty_exp
+        elif (event == UIListProgram.INC):
             self.update_duty(pwm, 1, exp)
-        elif (event == DEC):
+        elif (event == UIListProgram.DEC):
             self.update_duty(pwm, -1, exp)
 
         self.render()
@@ -214,23 +211,6 @@ class Program(UIListProgram):
 
         self.load_params(pwm)
 
-    def load_params(self, pwm):
-        params = store.get_params(pwm)
-        self.pwms[pwm].set_params(params)
-
-        """
-    Special case. Update F2_PHASE
-    """
-        if (pwm == PACKAGE):
-            self.align_phase_to_package()
-
-    def align_phase_to_package(self):
-        package_high = store.get_high(PACKAGE)
-        # if phase high > package_high
-        store.set_high(F2_PHASE, min(
-            store.get_high(F2_PHASE), package_high - 10))
-        self.set_period(F2_PHASE, package_high)
-
     def update_duty(self, pwm, inc, factor):
         high = store.get_high(pwm)
         new_duty = self.get_value_by_factor(high, inc, factor)
@@ -244,3 +224,20 @@ class Program(UIListProgram):
         if (factor == 1):
             return round(value + inc * value * 0.01)
         return value + inc * 1
+
+    def load_params(self, pwm):
+        params = store.get_params(pwm)
+        self.pwms[pwm].set_params(params)
+
+        """
+        Special case. Update F2_PHASE
+        """
+        if (pwm == PACKAGE):
+            self.align_phase_to_package()
+
+    def align_phase_to_package(self):
+        package_high = store.get_high(PACKAGE)
+        # if phase high > package_high
+        store.set_high(F2_PHASE, min(
+            store.get_high(F2_PHASE), package_high - 10))
+        self.set_period(F2_PHASE, package_high)

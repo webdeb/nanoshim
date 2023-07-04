@@ -1,6 +1,5 @@
-from ui_program import UIListProgram
-from simple_json_store import Store
-from rotary import Rotary
+from lib.ui_program import UIListProgram
+from lib.simple_json_store import Store
 import machine
 
 """
@@ -39,22 +38,22 @@ class Settings(UIListProgram):
     def get_freq(self):
         return str(int(machine.freq()/1_000_000)) + "MHz"
 
+    def get_contrast(self):
+        return str(self.display.get_contrast())
+
     def handle_freq_change(self, event):
         freq = int(machine.freq() / 1_000_000)
-        if (event == Rotary.INC):
+        if (event == UIListProgram.INC):
             freq += 1
-        elif (event == Rotary.DEC):
+        elif (event == UIListProgram.DEC):
             freq -= 1
 
         machine.freq(max(100, min(200, freq)) * 1_000_000)
 
-    def get_contrast(self):
-        return str(self.display.get_contrast())
-
     def handle_contrast_change(self, event):
         contrast = int(self.display.get_contrast())
-        if (event == Rotary.INC):
+        if (event == UIListProgram.INC):
             contrast += 10
-        elif (event == Rotary.DEC):
+        elif (event == UIListProgram.DEC):
             contrast -= 10
         self.display.set_contrast(contrast)

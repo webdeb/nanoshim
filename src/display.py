@@ -2,6 +2,7 @@ from machine import Pin, I2C
 import framebuf
 import misc.images as images
 import lib.ssd1306 as ssd1306
+import time
 from lib.simple_json_store import Store
 from constants import (
     PIN_SCL,
@@ -22,7 +23,8 @@ class Display:
         # Set up the I2C interface
         self.i2c = I2C(id=1, scl=Pin(PIN_SCL), sda=Pin(PIN_SDA), freq=400_000)
         # Set up the display
-        self.display = ssd1306.SSD1306_I2C(128, 64, self.i2c)
+        self.display = ssd1306.SSD1306_I2C(
+            128, 64, self.i2c, external_vcc=False)
         self.display.rotate(0)
         self.display.invert(0)
         self.display.contrast(store.get(CONTRAST_PATH))

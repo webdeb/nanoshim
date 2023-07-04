@@ -1,36 +1,49 @@
 import uasyncio as asyncio
-# from program_menu import MainMenu
-# from program_settings import Settings
-# from pupapupu.program import Program as PupaPuPu
+from program_menu import MainMenu
+from program_settings import Settings
+from programs.pupapupu.program import Program as PupaPuPu
+from programs.sixpwm.program import Program as SixPWM
 from misc.testinputs import test_ui
-from misc.images import LOGO
-from display import display
-from time import sleep
+
+
+def set_global_exception():
+    def handle_exception(loop, context):
+        import sys
+        sys.print_exception(context["exception"])
+        sys.exit()
+    loop = asyncio.get_event_loop()
+    loop.set_exception_handler(handle_exception)
+
+
+async def main_menu():
+    def open_4p(): return pwm_4p_program.start()
+    def open_6pwm(): return pwm_6pwm_program.start()
+    def open_menu(): return main_menu_program.start()
+    def open_settings(): return settings_program.start()
+
+    # run this first, this is the critical part.
+    pwm_4p_program = PupaPuPu(on_exit=open_menu)
+    pwm_6pwm_program = SixPWM(on_exit=open_menu)
+    settings_program = Settings(on_exit=open_menu)
+    main_menu_program = MainMenu({
+        "Settings": open_settings,
+        "4P Program": open_4p,
+        "6 PWM": open_6pwm
+    })
+
+    open_menu()
+    # asyncio.create_task(test_ui())
 
 
 async def main():
-    print("Start main")
-
-    # def open_pwm(): return pwm_program.active(1)
-    # def open_menu(): return main_menu_program.active(1)
-    # def open_settings(): return settings_program.active(1)
-
-    # run this first, this is the critical part.
-    # pwm_program = PupaPuPu(on_exit=open_menu)
-    # settings_program = Settings(on_exit=open_menu)
-
-    # main_menu_program = MainMenu({
-    #     # "PWM": open_pwm,
-    #     "Settings": open_settings
-    # })
-
-    # open_pwm()
-    display.render_image()
-    display.display.invert(0)
+    set_global_exception()
+    loop = asyncio.get_event_loop()
+    loop.create_task(main_menu())
+    loop.run_forever()
 
 if __name__ == "__main__":
+    print("Starting...")
     try:
-        print("main..")
-        asyncio.run(test_ui())
+        asyncio.run(main())
     except:
-        print("Something went wrong..")
+        asyncio.new_event_loop()
