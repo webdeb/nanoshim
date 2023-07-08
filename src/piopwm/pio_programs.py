@@ -17,7 +17,7 @@ def pwm_program():
 
     mov(y, isr)                      # l
     jmp(not_y, "load")               # l
-    mov(x, osr)[1]  # 2xl
+    mov(x, osr)                 [1]  # 2xl
 
     label("high")
     jmp(y_dec, "high")  .side(1)     # h

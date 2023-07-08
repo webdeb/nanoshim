@@ -17,6 +17,7 @@ from piopwm.piopwm import (
     PIOPWM,
     WITH_PIN,
     WITH_PIN_INVERTED,
+    clear_programs,
 )
 
 import fmam.store as store
@@ -32,7 +33,6 @@ PWMS = {
     F2_PHASE: {"pin": OUT3, "sm": 2, "with": PACKAGE, "inverted": True},
     PACKAGE:  {"pin": OUT4, "sm": 3},
 }
-
 
 class MultiPWMProgram(UIListProgram):
     max_freq_exp = 3  # 1 -> tick.. 2 -> 10%, 3 -> 50%
@@ -94,7 +94,10 @@ class MultiPWMProgram(UIListProgram):
             },
         ]
 
-        PIO(0).remove_program()
+        super().__init__()
+
+    def start(self):
+        clear_programs()
 
         self.pwms[PACKAGE] = PIOPWM(
             PWMS[PACKAGE]["sm"],
@@ -123,8 +126,6 @@ class MultiPWMProgram(UIListProgram):
         # self.load_params(F2_PHASE)
         self.load_params(F1)
         self.load_params(F2)
-
-        super().__init__()
 
     def get_exp(self, exp_name):
         return lambda: "x" + str(self.pwm_exp[exp_name] + 1)

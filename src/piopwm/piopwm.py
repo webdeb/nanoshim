@@ -1,4 +1,4 @@
-from rp2 import StateMachine
+from rp2 import PIO, StateMachine
 from machine import Pin, freq as machine_freq
 from .pio_programs import (
     pwm_program,
@@ -17,6 +17,7 @@ DOUBLE_PIN = 3
 
 MAX_VALUE = (1 << 31) - 1
 
+PIO_PROGRAMS = []
 
 class PIOPWM:
     def set_params(self, params):
@@ -56,19 +57,32 @@ class PIOPWM:
         if (mode == NORMAL):
             self.sm = StateMachine(id, prog=pwm_program,
                                    freq=freq, sideset_base=Pin(pin))
+            PIO_PROGRAMS.append((id, pwm_program))
         elif (mode == WITH_PIN):
             if (in_pin == None):
                 raise Exception("Define in_pin")
             self.sm = StateMachine(id, prog=pwm_with_pin_program, sideset_base=Pin(
                 pin), in_base=Pin(in_pin), freq=freq)
+            PIO_PROGRAMS.append((id, pwm_with_pin_program))
         elif (mode == WITH_PIN_INVERTED):
             if (in_pin == None):
                 raise Exception("Define in_pin")
             self.sm = StateMachine(id, prog=pwm_with_pin_program_inverted, sideset_base=Pin(
                 pin), in_base=Pin(in_pin), freq=freq)
+            PIO_PROGRAMS.append((id, pwm_with_pin_program_inverted))
         elif (mode == DOUBLE_PIN):
             pin_1 = pin
             self.sm = StateMachine(
                 id, prog=pushpull_program, sideset_base=Pin(pin_1), freq=freq)
+            PIO_PROGRAMS.append((id, pushpull_program))
         else:
             raise Exception("Define Mode")
+
+def clear_programs():
+    while PIO_PROGRAMS:
+        pio = 0
+        (sid, program) = PIO_PROGRAMS.pop()
+        if (sid > 3): pio = 1
+
+        PIO(pio).state_machine(sid % 4).active(0)
+        PIO(pio).remove_program(program)

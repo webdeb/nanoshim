@@ -2,7 +2,7 @@ from rp2 import PIO
 from constants import OUT1, OUT2, OUT3, OUT4, OUT5, OUT6
 from lib.ui_program import UIListProgram
 from utils import freq_to_str
-from piopwm.piopwm import PIOPWM
+from piopwm.piopwm import PIOPWM, clear_programs
 
 from . import store
 
@@ -51,9 +51,7 @@ class Program(UIListProgram):
         super().__init__()
 
     def start(self):
-        print("starting 6 pwms")
-        PIO(0).remove_program()
-        PIO(1).remove_program()
+        clear_programs()
 
         for pwm, settings in PWMS.items():
             print("create PWM ", pwm, settings)

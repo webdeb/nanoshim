@@ -7,6 +7,7 @@ from piopwm.piopwm import (
     WITH_PIN,
     WITH_PIN_INVERTED,
     DOUBLE_PIN,
+    clear_programs,
 )
 
 from . import store
@@ -16,7 +17,7 @@ PHASE = "phase"
 PUSHPULL = "pushpull"
 PWMS = {
     PUSHPULL: {"pin": OUT1, "sm": 0},
-    PULSE: {"pin": OUT3, "sm": 1, },
+    PULSE: {"pin": OUT3, "sm": 1},
     PHASE: {"pin": OUT4, "sm": 4},
 }
 
@@ -78,8 +79,8 @@ class Program(UIListProgram):
         super().__init__()
 
     def start(self):
-        PIO(0).remove_program()
-        PIO(1).remove_program()
+        clear_programs()
+        print("starting...")
 
         self.pwms[PUSHPULL] = PIOPWM(
             PWMS[PUSHPULL]["sm"],
