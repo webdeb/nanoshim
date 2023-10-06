@@ -44,6 +44,7 @@ async def main():
     loop.create_task(main_menu())
     loop.run_forever()
 
+
 if __name__ == "__main__":
     print("Starting...")
     try:

@@ -65,7 +65,8 @@ class Store:
         else:
             obj[path_parts[-1]] = value
 
-        asyncio.create_task(self.save_async)
+        if (False == self.is_saving_scheduled):
+            asyncio.create_task(self.save_async)
 
     def get(self, path, data=None):
         try:
@@ -96,7 +97,5 @@ class Store:
         f.close()
 
     async def save_async(self):
-        if (self.is_saving_scheduled):
-            return
         self.is_saving_scheduled = True
         self.save()

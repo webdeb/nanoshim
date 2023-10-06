@@ -2,9 +2,9 @@ def freq_to_str(freq):
     if (freq < 1000):
         return str(round(freq, 1)) + "Hz"
     elif (freq < 1_000_000):
-        return str(round(freq / 1_000, 2)) + "kHz"
+        return str(round(freq / 1_000, 2)) + "k"
     else:
-        return str(round(freq / 1_000_000, 2)) + "MHz"
+        return str(round(freq / 1_000_000, 2)) + "M"
 
 
 def ns_to_str(ns):
