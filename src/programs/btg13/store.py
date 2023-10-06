@@ -1,6 +1,6 @@
 from lib.simple_json_store import Store
 
-DEFAULT_PATH = "data/pupapupu.json"
+DEFAULT_PATH = "data/twofam.json"
 
 DUTY_NS = "ns"
 DUTY_CYCLES = "cycles"
@@ -8,37 +8,34 @@ DUTY_PERCENT = "%"
 DUTY_MODES = [DUTY_NS, DUTY_CYCLES, DUTY_PERCENT]
 
 SYSTEN_STRUCTURE = {
-    "pushpull": {
-        "high": 1000,
-        "low": 1000,
+    "f1": {
+        "high": 15,
+        "low": 50,
         "duty_mode": DUTY_CYCLES,
         "duty_percent": 0,
     },
-    "pulse": {
-        "high": 380,
-        "low": 380,
-        "count": 10,
-        "phase": 10,
-        "duty_mode": DUTY_CYCLES,
-        "duty_percent": 0,
-    },
-    "phase": {
+    "f2": {
         "high": 15,
         "low": 20,
         "duty_mode": DUTY_CYCLES,
         "duty_percent": 0,
-        "half": 0,
     },
-    # "package": {
-    #     "high": 15,
-    #     "low": 20,
-    #     "duty_mode": DUTY_CYCLES,
-    #     "duty_percent": 0,
-    # },
+    "package": {
+        "high": 15,
+        "low": 20,
+        "duty_mode": DUTY_CYCLES,
+        "duty_percent": 0,
+    },
+    "f2_phase": {
+        "high": 15,
+        "low": 20,
+        "duty_mode": DUTY_CYCLES,
+        "duty_percent": 0,
+    }
 }
 
 INIT_STRUCTURE = {
-    "version": 11,
+    "version": 10,
     "system": SYSTEN_STRUCTURE,
     "saved": {}
 }
@@ -58,32 +55,8 @@ def get_duty_percent(pwm):
     return store.get(f"system.{pwm}.duty_percent")
 
 
-def set_half(half):
-    return store.set("system.phase.half", int(half))
-
-
-def get_half():
-    return int(store.get("system.phase.half"))
-
-
 def set_high(pwm, value):
     store.set(f"system.{pwm}.high", max(1, value))
-
-
-def get_phase(pwm):
-    return int(store.get(f"system.{pwm}.phase"))
-
-
-def set_phase(pwm, value):
-    store.set(f"system.{pwm}.phase", value)
-
-
-def get_count(pwm):
-    return int(store.get(f"system.{pwm}.count"))
-
-
-def set_count(pwm, value):
-    store.set(f"system.{pwm}.count", value)
 
 
 def reset_percent(pwm):

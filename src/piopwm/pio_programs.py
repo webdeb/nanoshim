@@ -3,9 +3,11 @@ from rp2 import PIO, asm_pio
 LOW = 5
 HIGH = 5
 PERIOD = LOW + HIGH
-
+# 96ns min period (48ns + 48ns), 32bit per high and low (70s per period up to 96ns per period with a 8ns step.)
 
 # 9 Instructions
+
+
 @asm_pio(sideset_init=PIO.OUT_LOW)
 def pwm_program():
     label("load")
@@ -17,7 +19,7 @@ def pwm_program():
 
     mov(y, isr)                      # l
     jmp(not_y, "load")               # l
-    mov(x, osr)                 [1]  # 2xl
+    mov(x, osr)[1]  # 2xl
 
     label("high")
     jmp(y_dec, "high")  .side(1)     # h

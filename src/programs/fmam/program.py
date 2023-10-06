@@ -34,6 +34,7 @@ PWMS = {
     PACKAGE:  {"pin": OUT4, "sm": 3},
 }
 
+
 class MultiPWMProgram(UIListProgram):
     max_freq_exp = 3  # 1 -> tick.. 2 -> 10%, 3 -> 50%
     max_duty_exp = 3  # 1 -> tick.. 2 -> 10%, 3 -> 50%

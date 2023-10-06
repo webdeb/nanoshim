@@ -3,7 +3,7 @@ from program_menu import MainMenu
 from program_settings import Settings
 from programs.pupapupu.program import Program as PupaPuPu
 from programs.sixpwm.program import Program as SixPWM
-from misc.testinputs import test_ui
+from programs.twofam.program import Program as TwoFAM
 
 
 def set_global_exception():
@@ -17,18 +17,21 @@ def set_global_exception():
 
 async def main_menu():
     def open_4p(): return pwm_4p_program.start()
-    def open_6pwm(): return pwm_6pwm_program.start()
+    # def open_6pwm(): return pwm_6pwm_program.start()
     def open_menu(): return main_menu_program.start()
     def open_settings(): return settings_program.start()
+    # def open_2fam(): return twofam.start()
 
     # run this first, this is the critical part.
+    # twofam = TwoFAM(on_exit=open_menu)
     pwm_4p_program = PupaPuPu(on_exit=open_menu)
     pwm_6pwm_program = SixPWM(on_exit=open_menu)
     settings_program = Settings(on_exit=open_menu)
     main_menu_program = MainMenu({
         "Settings": open_settings,
         "4P Program": open_4p,
-        "6 PWM": open_6pwm
+        # "6 PWM": open_6pwm,
+        # "2F AM": open_2fam,
     })
 
     open_menu()
