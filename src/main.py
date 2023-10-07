@@ -17,21 +17,21 @@ def set_global_exception():
 
 async def main_menu():
     def open_4p(): return pwm_4p_program.start()
-    # def open_6pwm(): return pwm_6pwm_program.start()
+    def open_6pwm(): return pwm_6pwm_program.start()
     def open_menu(): return main_menu_program.start()
     def open_settings(): return settings_program.start()
-    # def open_2fam(): return twofam.start()
+    def open_2fam(): return twofam.start()
 
     # run this first, this is the critical part.
-    # twofam = TwoFAM(on_exit=open_menu)
+    twofam = TwoFAM(on_exit=open_menu)
     pwm_4p_program = PupaPuPu(on_exit=open_menu)
     pwm_6pwm_program = SixPWM(on_exit=open_menu)
     settings_program = Settings(on_exit=open_menu)
     main_menu_program = MainMenu({
         "Settings": open_settings,
         "4P Program": open_4p,
-        # "6 PWM": open_6pwm,
-        # "2F AM": open_2fam,
+        "6 PWM": open_6pwm,
+        "2F AM": open_2fam,
     })
 
     open_menu()
