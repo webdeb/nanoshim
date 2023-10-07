@@ -66,7 +66,7 @@ class Store:
             obj[path_parts[-1]] = value
 
         if (False == self.is_saving_scheduled):
-            asyncio.create_task(self.save_async)
+            asyncio.create_task(self.save_async())
 
     def get(self, path, data=None):
         try:
@@ -91,10 +91,14 @@ class Store:
         if data == None:
             data = self.data
 
+        try:
+            with open(self.path, "w") as f:
+                f.write(json.dumps(data))
+                f.close()
+        except:
+            print("Error saving to file.")
+
         self.is_saving_scheduled = False
-        f = open(self.path, "w")
-        f.write(json.dumps(data))
-        f.close()
 
     async def save_async(self):
         self.is_saving_scheduled = True
