@@ -1,7 +1,7 @@
 import uasyncio as asyncio
 from program_menu import MainMenu
 from program_settings import Settings
-from programs.pupapupu.program import Program as PupaPuPu
+from programs.pppp.program import Program as PupaPuPu
 from programs.sixpwm.program import Program as SixPWM
 from programs.twofam.program import Program as TwoFAM
 
@@ -29,12 +29,12 @@ async def main_menu():
     settings_program = Settings(on_exit=open_menu)
     main_menu_program = MainMenu({
         "Settings": open_settings,
-        "4P Program": open_4p,
+        "4P": open_4p,
         "6 PWM": open_6pwm,
         "2F AM": open_2fam,
     })
 
-    open_menu()
+    open_4p()
     # asyncio.create_task(test_ui())
 
 

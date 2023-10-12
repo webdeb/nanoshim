@@ -109,3 +109,56 @@ def pushpull_program():
     jmp(x_dec, "low_2")   .side(0)    # l + x
 
     wrap()
+
+
+"""
+Triggered Push Pull
+"""
+
+
+@asm_pio()
+def trigger_low_high():
+    label("load")
+    pull()
+    out(isr, 32)
+    pull()
+
+    wrap_target()
+
+    mov(y, isr)                      # l
+    jmp(not_y, "load")               # l
+    mov(x, osr)[1]  # 2xl
+
+    irq(4)
+    label("high")
+    jmp(y_dec, "high")
+    nop()[2]  # 4h
+
+    irq(5)
+    label("low")
+    jmp(x_dec, "low")               # l + x
+
+    wrap()
+
+
+@asm_pio(sideset_init=(PIO.OUT_LOW, PIO.OUT_LOW))
+def triggered_push_pull():
+    label("load")
+    pull()
+    out(isr, 32)
+    pull()
+
+    wrap_target()
+
+    mov(y, isr)             .side(0)        # l
+    jmp(not_y, "load")      .side(0)        # l
+    mov(x, osr)             .side(0)        # l
+
+    wait(1, irq, 4)            .side(0)        # l
+    label("high_1")
+    jmp(y_dec, "high_1")    .side(0b01)     # h
+    wait(1, irq, 5)            .side(0)        # l
+    label("high_2")
+    jmp(x_dec, "high_2")    .side(0b10)     # h
+
+    wrap()

@@ -1,6 +1,6 @@
 from lib.simple_json_store import Store
 
-DEFAULT_PATH = "data/pupapupu.json"
+DEFAULT_PATH = "data/4p.json"
 
 DUTY_NS = "ns"
 DUTY_CYCLES = "cycles"
@@ -8,11 +8,17 @@ DUTY_PERCENT = "%"
 DUTY_MODES = [DUTY_NS, DUTY_CYCLES, DUTY_PERCENT]
 
 SYSTEN_STRUCTURE = {
-    "pushpull": {
+    "symmetry": {
         "high": 1000,
         "low": 1000,
-        "duty_mode": DUTY_CYCLES,
-        "duty_percent": 0,
+        "duty_mode": DUTY_PERCENT,
+        "duty_percent": 0.5,
+    },
+    "pushpull": {
+        "high": 500,
+        "low": 500,
+        "high_percent": 0.5,
+        "low_percent": 0.5,
     },
     "pulse": {
         "high": 380,
@@ -38,12 +44,20 @@ SYSTEN_STRUCTURE = {
 }
 
 INIT_STRUCTURE = {
-    "version": 11,
+    "version": 2,
     "system": SYSTEN_STRUCTURE,
     "saved": {}
 }
 
 store = Store(path=DEFAULT_PATH, inital_data=INIT_STRUCTURE)
+
+
+def get_param(pwm, param):
+    return store.get(f"system.{pwm}.{param}")
+
+
+def set_param(pwm, param, value):
+    store.set(f"system.{pwm}.{param}", value)
 
 
 def set_low(pwm, value):
@@ -55,7 +69,7 @@ def get_low(pwm):
 
 
 def get_duty_percent(pwm):
-    return store.get(f"system.{pwm}.duty_percent")
+    return float(store.get(f"system.{pwm}.duty_percent"))
 
 
 def set_half(half):
@@ -120,20 +134,18 @@ def get_period(pwm):
 """
 TODO: Save Systems
 """
+# def save_system(name):
+#     system = store.get("system")
+#     saved = store.get("saved") or {}
+#     saved[name] = system
+#     store.set("saved", saved)
 
 
-def save_system(name):
-    system = store.get("system")
-    saved = store.get("saved") or {}
-    saved[name] = system
-    store.set("saved", saved)
+# def get_saved_names():
+#     systems = list(store.get("saved") or {})
+#     return systems
 
 
-def get_saved_names():
-    systems = list(store.get("saved") or {})
-    return systems
-
-
-def load_saved(name):
-    system = store.get(f"saved.{name}")
-    store.set("system", system)
+# def load_saved(name):
+#     system = store.get(f"saved.{name}")
+#     store.set("system", system)

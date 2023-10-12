@@ -45,7 +45,7 @@ class Display:
                 item = [item, lambda: ""]
 
             [left, right] = item
-            text_addition = right()
+            text_addition = str(right())
 
             left_text = ""
             if (type(left) is list):
