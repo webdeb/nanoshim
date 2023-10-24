@@ -14,7 +14,7 @@ INIT_STRUCTURE = {
         "machine_freq": 125_000_000
     },
 }
-store = Store(path="data/settings_store.json", inital_data=INIT_STRUCTURE)
+store = Store(path="/data/settings_store.json", inital_data=INIT_STRUCTURE)
 
 
 class Settings(UIListProgram):

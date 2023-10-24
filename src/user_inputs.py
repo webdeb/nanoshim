@@ -1,5 +1,5 @@
 # Define here all User Inputs like Buttons and Rotary Encoder
-import lib.rotary as rotary
+from lib.rotary import Rotary, INC, DEC, TAP
 from lib.levels import Levels
 
 from constants import (
@@ -16,14 +16,29 @@ SW3 = 21000
 SW4 = 33000
 SW5 = 43000
 
-Buttons = Levels(
-    pin=PIN_KEYS,
-    levels=(SW1, SW2, SW3, SW4, SW5),
-    cb=lambda level: print("No callback yet for", level)
-)
+_Buttons = None
+_Encoder = None
 
-Encoder = rotary.Rotary(
-    PIN_ENC_A,
-    PIN_ENC_B,
-    PIN_ENC_C
-)
+
+def get_inputs():
+    return _Buttons, _Encoder
+
+
+async def create_inputs():
+    global _Buttons, _Encoder
+
+    _Buttons = Levels(
+        pin=PIN_KEYS,
+        levels=(SW1, SW2, SW3, SW4, SW5),
+        cb=lambda level: print("No callback yet for", level)
+    )
+
+    _Encoder = Rotary(
+        PIN_ENC_A,
+        PIN_ENC_B,
+        PIN_ENC_C
+    )
+
+    print("Inputs created")
+
+    return _Buttons, _Encoder

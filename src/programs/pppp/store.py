@@ -1,6 +1,6 @@
 from lib.simple_json_store import Store
 
-DEFAULT_PATH = "data/4p.json"
+DEFAULT_PATH = "/data/pppp.json"
 
 DUTY_NS = "ns"
 DUTY_CYCLES = "cycles"
@@ -34,13 +34,7 @@ SYSTEN_STRUCTURE = {
         "duty_mode": DUTY_CYCLES,
         "duty_percent": 0,
         "half": 0,
-    },
-    # "package": {
-    #     "high": 15,
-    #     "low": 20,
-    #     "duty_mode": DUTY_CYCLES,
-    #     "duty_percent": 0,
-    # },
+    }
 }
 
 INIT_STRUCTURE = {
@@ -129,23 +123,3 @@ def get_params(pwm):
 
 def get_period(pwm):
     return sum(get_params(pwm))
-
-
-"""
-TODO: Save Systems
-"""
-# def save_system(name):
-#     system = store.get("system")
-#     saved = store.get("saved") or {}
-#     saved[name] = system
-#     store.set("saved", saved)
-
-
-# def get_saved_names():
-#     systems = list(store.get("saved") or {})
-#     return systems
-
-
-# def load_saved(name):
-#     system = store.get(f"saved.{name}")
-#     store.set("system", system)

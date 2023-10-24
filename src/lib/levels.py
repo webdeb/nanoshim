@@ -5,7 +5,7 @@ import time
 
 class Levels:
     _last_level = None
-    debounce_ms = 1
+    debounce_ms = 5
     none_level = 65000
     callbacks = {}
 

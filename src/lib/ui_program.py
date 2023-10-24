@@ -1,7 +1,9 @@
 from user_inputs import (
-    Buttons, SW1, SW2, SW3, SW4, SW5,
-    Encoder,
+    SW1, SW2, SW3, SW4, SW5,
+    INC, DEC, TAP,
+    get_inputs,
 )
+
 from display import display
 
 
@@ -24,6 +26,8 @@ class UIListProgram:
         self.items_text = list(map(lambda i: i["text"], self.items))
 
     def start(self):
+        Buttons, Encoder = get_inputs()
+
         # set button handler to this button handler
         Buttons.on(SW1, self.on_sw1)
         Buttons.on(SW2, self.on_sw2)
@@ -62,11 +66,11 @@ class UIListProgram:
         self.event_handler(UIListProgram.PLUS)
 
     def encoder_handler(self, event):
-        if (event == Encoder.INC):
+        if (event == INC):
             self.event_handler(UIListProgram.INC)
-        elif (event == Encoder.DEC):
+        elif (event == DEC):
             self.event_handler(UIListProgram.DEC)
-        elif (event == Encoder.TAP):
+        elif (event == TAP):
             self.event_handler(UIListProgram.TAP)
 
     def event_handler(self, event):

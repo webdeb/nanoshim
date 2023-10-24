@@ -20,7 +20,7 @@ PIN_RGB_LED = 16
 # Keys
 PIN_KEYS = 26
 
-# Signals TODO
+# Signals
 OUT1 = 8
 OUT2 = 9
 OUT3 = 10

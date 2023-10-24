@@ -7,10 +7,12 @@ def noop(_v):
     pass
 
 
+INC = 1
+DEC = 2
+TAP = 4
+
+
 class Rotary:
-    INC = 1
-    DEC = 2
-    TAP = 4
     transition = 0
 
     def __init__(self, clk, sw, dt, handler=noop):
@@ -41,9 +43,9 @@ class Rotary:
         self.transition = 0b11111111 & self.transition << 4 | self.last_status << 2 | new_status
 
         if self.transition in [23, 232]:
-            self.handler(Rotary.INC)
+            self.handler(INC)
         elif self.transition in [43, 212]:
-            self.handler(Rotary.DEC)
+            self.handler(DEC)
         self.last_status = new_status
 
     _press_time = 0
@@ -59,4 +61,4 @@ class Rotary:
             return
 
         self._press_time = 0
-        self.handler(Rotary.TAP)
+        self.handler(TAP)

@@ -1,11 +1,12 @@
 import machine
 from lib.ui_program import UIListProgram
 from utils import freq_to_str
-from constants import (OUT1, OUT2, OUT3, OUT4)
+from constants import (OUT1, OUT3, OUT4, OUT5)
 from piopwm.piopwm import (
     PIOPWM,
     WITH_PIN,
-    WITH_PIN_INVERTED,
+    WITH_PIN_INVERTED_ONCE,
+    INVERTED_PIN,
     TRIGGER,
     TRIGGERED_PUSH_PULL,
     clear_programs,
@@ -14,6 +15,7 @@ from piopwm.piopwm import (
 from . import store
 
 PULSE = "pulse"
+PULSE_INVERTED = "pulse_inverted"
 PHASE = "phase"
 PUSHPULL = "pushpull"
 SYMMETRY = "symmetry"
@@ -22,7 +24,8 @@ PWMS = {
     SYMMETRY: {"sm": 0},
     PUSHPULL: {"pin": OUT1, "sm": 1},
     PULSE: {"pin": OUT3, "sm": 4},
-    PHASE: {"pin": OUT4, "sm": 5},
+    PULSE_INVERTED: {"pin": OUT4, "sm": 5},
+    PHASE: {"pin": OUT5, "sm": 6},
 }
 
 
@@ -80,7 +83,6 @@ class Program(UIListProgram):
                 "text": [["Duty:", self.exp_str("pulse_duty")], self.duty_str(PULSE)],
                 "handle_change": lambda event: self.change_pulse_duty(event),
             },
-
             {
                 "text": [["Count:"], self.pulse_count],
                 "handle_change": lambda event: self.change_pulse_count(event),
@@ -116,6 +118,13 @@ class Program(UIListProgram):
             in_pin=PWMS[PHASE]["pin"],
             mode=WITH_PIN,
         )
+        self.pwms[PULSE_INVERTED] = PIOPWM(
+            PWMS[PULSE_INVERTED]["sm"],
+            pin=PWMS[PULSE_INVERTED]["pin"],
+            in_pin=PWMS[PULSE]["pin"],
+            mode=INVERTED_PIN,
+        ).sm.active(1)
+
         self.set_phase()
         self.load_params(SYMMETRY)
         self.load_params(PUSHPULL)
@@ -133,7 +142,7 @@ class Program(UIListProgram):
         elif (event in [UIListProgram.INC, UIListProgram.DEC]):
             new_period = round(self.get_value_by_exp(
                 store.get_period(SYMMETRY),
-                self.inc_direction(event, True),
+                self.dir_to_inc(event, True),
                 exp_key,
                 use_freq=True
             ))
@@ -151,15 +160,15 @@ class Program(UIListProgram):
         if (event in [UIListProgram.MINUS, UIListProgram.PLUS]):
             self.update_exp(exp_key, event)
         elif (event in [UIListProgram.INC, UIListProgram.DEC]):
-            self.update_duty(SYMMETRY, self.inc_direction(event), exp_key)
+            self.update_duty(SYMMETRY, self.dir_to_inc(event), exp_key)
 
             self.load_params(SYMMETRY)
             self.align_pushpull()
 
     def align_pushpull(self):
         h, l = store.get_params(SYMMETRY)
-        hi_1 = store.get_param(PUSHPULL, "high_percent")
-        hi_2 = store.get_param(PUSHPULL, "low_percent")
+        hi_1 = float(store.get_param(PUSHPULL, "high_percent"))
+        hi_2 = float(store.get_param(PUSHPULL, "low_percent"))
         store.set_params(PUSHPULL, (round(h * hi_1), round(l * hi_2)))
         self.load_params(PUSHPULL)
 
@@ -169,15 +178,15 @@ class Program(UIListProgram):
         if (event in [UIListProgram.PLUS, UIListProgram.MINUS]):
             self.update_exp(exp_key, event)
         elif (event in [UIListProgram.INC, UIListProgram.DEC]):
-            symmetry = store.get_param(SYMMETRY, half)
-            duty = self.get_value_by_exp(store.get_param(
-                PUSHPULL, half), self.inc_direction(event), exp_key)
+            symmetry = int(store.get_param(SYMMETRY, half))
+            duty = round(self.get_value_by_exp(store.get_param(
+                PUSHPULL, half), self.dir_to_inc(event), exp_key))
             store.set_param(PUSHPULL, half + "_percent", duty / symmetry)
             store.set_param(PUSHPULL, half, duty)
             self.load_params(PUSHPULL)
 
     def pp_duty_str(self, half):
-        return lambda: str(round(100 * store.get_param(PUSHPULL, half + "_percent"), 2)) + "%"
+        return lambda: str(round(100 * float(store.get_param(PUSHPULL, half + "_percent")), 2)) + "%"
 
     """
     .Push Pull
@@ -188,7 +197,7 @@ class Program(UIListProgram):
         self.pwms[PHASE] = PIOPWM(
             PWMS[PHASE]["sm"],
             pin=PWMS[PHASE]["pin"],
-            mode=WITH_PIN_INVERTED,
+            mode=WITH_PIN_INVERTED_ONCE,
             in_pin=PWMS[PUSHPULL]["pin"] + half
         )
         self.align_phase()
@@ -240,11 +249,11 @@ class Program(UIListProgram):
         elif (event in [UIListProgram.INC, UIListProgram.DEC]):
             store.set_phase(
                 PULSE,
-                max(1, self.get_value_by_exp(
+                max(1, round(self.get_value_by_exp(
                     store.get_phase(PULSE),
-                    self.inc_direction(event),
+                    self.dir_to_inc(event),
                     exp_key
-                ))
+                )))
             )
             self.align_phase()
 
@@ -263,6 +272,7 @@ class Program(UIListProgram):
 
     def change_pulse_freq(self, event):
         self.change_freq(event, PULSE)
+        self.align_phase()
         self.load_params(PULSE)
 
     def change_pulse_duty(self, event):
@@ -274,7 +284,7 @@ class Program(UIListProgram):
         if (event in [UIListProgram.MINUS, UIListProgram.PLUS]):
             self.update_exp(exp_key, event)
         elif (event in [UIListProgram.INC, UIListProgram.DEC]):
-            self.update_period(pwm, self.inc_direction(
+            self.update_period(pwm, self.dir_to_inc(
                 event, invert=True), exp_key)
 
     def change_duty(self, pwm, event):
@@ -285,11 +295,11 @@ class Program(UIListProgram):
         elif (event in [UIListProgram.PLUS, UIListProgram.MINUS]):
             self.update_exp(exp_key, event)
         elif (event in [UIListProgram.INC, UIListProgram.DEC]):
-            self.update_duty(pwm, self.inc_direction(event), exp_key)
+            self.update_duty(pwm, self.dir_to_inc(event), exp_key)
 
     def update_period(self, pwm, inc, exp_key):
         period = store.get_period(pwm)
-        new_period = self.get_value_by_exp(period, inc, exp_key, use_freq=True)
+        new_period = round(self.get_value_by_exp(period, inc, exp_key, use_freq=True))
         self.set_period(pwm, new_period)
 
     def set_period(self, pwm, period):
@@ -305,7 +315,7 @@ class Program(UIListProgram):
     def update_duty(self, pwm, inc, exp_key):
         high = store.get_high(pwm)
         period = store.get_period(pwm)
-        new_duty = min(period - 5, self.get_value_by_exp(high, inc, exp_key))
+        new_duty = min(period - 5, round(self.get_value_by_exp(high, inc, exp_key)))
         self.set_duty(pwm, new_duty)
 
     def set_duty(self, pwm, high):
@@ -344,13 +354,13 @@ class Program(UIListProgram):
         exp = self.get_exp(exp_key)
         if (use_freq and exp in [1, 2, 3]):
             mf = machine.freq()
-            return round(mf/self.get_value_by_exp(mf/value, inc * -1, exp_key))
+            return mf/self.get_value_by_exp(mf/value, inc * -1, exp_key)
         if (exp == 3):
-            return round(value + inc * value * 0.5)
+            return value + inc * value * 0.5
         if (exp == 2):
-            return round(value + inc * value * 0.1)
+            return value + inc * value * 0.1
         if (exp == 1):
-            return round(value + inc * value * 0.01)
+            return value + inc * value * 0.01
 
         return value + inc * 1
 
@@ -369,7 +379,7 @@ class Program(UIListProgram):
 
         return self.pwm_exp[exp_key]
 
-    def inc_direction(self, event, invert=False):
+    def dir_to_inc(self, event, invert=False):
         inc = 1
         if (event == UIListProgram.DEC):
             inc = -1

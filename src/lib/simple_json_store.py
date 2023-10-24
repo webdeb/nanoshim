@@ -1,5 +1,6 @@
 import os
 import json
+import gc
 import uasyncio as asyncio
 
 
@@ -24,7 +25,7 @@ class Store:
 
     def ensure_file(self):
         for path_part in self.dir.split("/"):
-            if (path_part not in os.listdir()):
+            if (path_part and path_part not in os.listdir()):
                 os.mkdir(path_part)
             os.chdir(path_part)
 
@@ -38,17 +39,6 @@ class Store:
         if (self.data.get("version", None) != self.inital_data.get("version", None)):
             self.save(self.inital_data)
             self.load()
-
-    """
-    Loads the file into memory
-    """
-
-    def load(self):
-        self.is_loading = True
-        f = open(self.path)
-        self.data = json.loads(f.read())
-        f.close()
-        self.is_loading = False
 
     def set(self, path, value):
         path_parts = path.split(".")
@@ -65,8 +55,10 @@ class Store:
         else:
             obj[path_parts[-1]] = value
 
-        if (False == self.is_saving_scheduled):
-            asyncio.create_task(self.save_async())
+        if (self.is_saving_scheduled == False):
+            self.is_saving_scheduled = True
+            loop = asyncio.get_event_loop()
+            loop.create_task(self.save_async())
 
     def get(self, path, data=None):
         try:
@@ -87,19 +79,43 @@ class Store:
             print(path)
             return 0
 
+    def load(self):
+        self.is_loading = True
+        print(self.path)
+        with open(self.path) as f:
+            self.data = json.loads(f.read())
+            f.close()
+
+        self.is_loading = False
+
     def save(self, data=None):
         if data == None:
             data = self.data
 
         try:
-            with open(self.path, "w") as f:
+            with open(str(self.path), "w") as f:
                 f.write(json.dumps(data))
                 f.close()
-        except:
-            print("Error saving to file.")
+                gc.collect()
+        except OSError as exc:
+            print("Error saving to file.", self.path)
+            print("File exists:", self.path in os.listdir(""))
+            print(exc.errno)
+            print(exc)
 
+        # clean()
         self.is_saving_scheduled = False
 
     async def save_async(self):
-        self.is_saving_scheduled = True
+        await asyncio.sleep_ms(100)
         self.save()
+
+
+def clean():
+    try:
+        for f in os.listdir("/data"):
+            if (f.endswith(".mpy")):
+                os.remove("/data/" + f)
+                print("removed")
+    except:
+        print("Error while cleaning..")

@@ -1,6 +1,6 @@
 from lib.simple_json_store import Store
 
-DEFAULT_PATH = "data/twofam.json"
+DEFAULT_PATH = "/data/twofam.json"
 
 DUTY_NS = "ns"
 DUTY_CYCLES = "cycles"

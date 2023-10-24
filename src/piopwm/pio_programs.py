@@ -1,13 +1,12 @@
 from rp2 import PIO, asm_pio
 
+# 96ns min period (48ns + 48ns), 32bit per high and low (70s per period up to 96ns per period with a 8ns step.)
 LOW = 5
 HIGH = 5
 PERIOD = LOW + HIGH
-# 96ns min period (48ns + 48ns), 32bit per high and low (70s per period up to 96ns per period with a 8ns step.)
+
 
 # 9 Instructions
-
-
 @asm_pio(sideset_init=PIO.OUT_LOW)
 def pwm_program():
     label("load")
@@ -68,6 +67,39 @@ def pwm_with_pin_program_inverted():
     jmp(not_y, "load")               # l (dont care about "load" delay)
     mov(x, osr)                      # l
 
+    wait(1, pin, 0)                  # l
+    label("low")
+    jmp(y_dec, "low")                # l + x
+    label("high")
+    jmp(x_dec, "high")  .side(1)     # h + y
+    nop()[3]     # 4xh
+    wrap()
+
+
+# 10 Instructions
+@asm_pio(sideset_init=PIO.OUT_HIGH)
+def inverted_pin():
+    wrap_target()
+    wait(1, pin, 0)     .side(1)
+    wait(0, pin, 0)     .side(0)
+    wrap()
+
+# 10 Instructions
+
+
+@asm_pio(sideset_init=PIO.OUT_LOW)
+def pwm_with_pin_program_inverted_once():
+    label("load")
+    pull()
+    out(isr, 32)
+    pull()
+
+    wrap_target()
+
+    mov(y, isr)         .side(0)     # l
+    jmp(not_y, "load")               # l (dont care about "load" delay)
+    mov(x, osr)                      # l
+    wait(0, pin, 0)                  # l
     wait(1, pin, 0)                  # l
     label("low")
     jmp(y_dec, "low")                # l + x

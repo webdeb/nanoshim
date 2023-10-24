@@ -1,4 +1,5 @@
 import uasyncio as asyncio
+from user_inputs import create_inputs
 from program_menu import MainMenu
 from program_settings import Settings
 from programs.pppp.program import Program as PupaPuPu
@@ -16,6 +17,7 @@ def set_global_exception():
 
 
 async def main_menu():
+    await create_inputs()
     def open_4p(): return pwm_4p_program.start()
     def open_6pwm(): return pwm_6pwm_program.start()
     def open_menu(): return main_menu_program.start()
@@ -28,10 +30,10 @@ async def main_menu():
     pwm_6pwm_program = SixPWM(on_exit=open_menu)
     settings_program = Settings(on_exit=open_menu)
     main_menu_program = MainMenu({
-        "Settings": open_settings,
         "4P": open_4p,
         "6 PWM": open_6pwm,
         "2F AM": open_2fam,
+        "Settings": open_settings,
     })
 
     open_4p()
@@ -45,9 +47,14 @@ async def main():
     loop.run_forever()
 
 
-if __name__ == "__main__":
+def start():
     print("Starting...")
     try:
         asyncio.run(main())
     except:
+        print("Started new event loop")
         asyncio.new_event_loop()
+
+
+if __name__ == "__main__":
+    start()

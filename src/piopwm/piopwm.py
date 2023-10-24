@@ -6,6 +6,8 @@ from .pio_programs import (
     triggered_push_pull,
     pwm_with_pin_program,
     pwm_with_pin_program_inverted,
+    pwm_with_pin_program_inverted_once,
+    inverted_pin,
     pushpull_program,
     HIGH,
     LOW,
@@ -18,6 +20,8 @@ WITH_PIN_INVERTED = 2
 DOUBLE_PIN = 3
 TRIGGER = 4
 TRIGGERED_PUSH_PULL = 5
+WITH_PIN_INVERTED_ONCE = 6
+INVERTED_PIN = 7
 
 MAX_VALUE = (1 << 31) - 1
 
@@ -76,12 +80,24 @@ class PIOPWM:
             self.sm = StateMachine(id, prog=pwm_with_pin_program, sideset_base=Pin(
                 pin), in_base=Pin(in_pin), freq=freq)
             PIO_PROGRAMS.append((id, pwm_with_pin_program))
+        elif (mode == INVERTED_PIN):
+            if (in_pin == None):
+                raise Exception("Define in_pin")
+            self.sm = StateMachine(id, prog=inverted_pin, sideset_base=Pin(
+                pin), in_base=Pin(in_pin), freq=freq)
+            PIO_PROGRAMS.append((id, inverted_pin))
         elif (mode == WITH_PIN_INVERTED):
             if (in_pin == None):
                 raise Exception("Define in_pin")
             self.sm = StateMachine(id, prog=pwm_with_pin_program_inverted, sideset_base=Pin(
                 pin), in_base=Pin(in_pin), freq=freq)
             PIO_PROGRAMS.append((id, pwm_with_pin_program_inverted))
+        elif (mode == WITH_PIN_INVERTED_ONCE):
+            if (in_pin == None):
+                raise Exception("Define in_pin")
+            self.sm = StateMachine(id, prog=pwm_with_pin_program_inverted_once, sideset_base=Pin(
+                pin), in_base=Pin(in_pin), freq=freq)
+            PIO_PROGRAMS.append((id, pwm_with_pin_program_inverted_once))
         elif (mode == DOUBLE_PIN):
             pin_1 = pin
             self.sm = StateMachine(
