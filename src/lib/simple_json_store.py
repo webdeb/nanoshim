@@ -35,7 +35,6 @@ class Store:
             self.save(self.inital_data)  # Initialy it will save
 
     def ensure_version(self):
-        print(self.data, self.inital_data)
         if (self.data.get("version", None) != self.inital_data.get("version", None)):
             self.save(self.inital_data)
             self.load()
@@ -81,7 +80,6 @@ class Store:
 
     def load(self):
         self.is_loading = True
-        print(self.path)
         with open(self.path) as f:
             self.data = json.loads(f.read())
             f.close()
@@ -99,9 +97,6 @@ class Store:
                 gc.collect()
         except OSError as exc:
             print("Error saving to file.", self.path)
-            print("File exists:", self.path in os.listdir(""))
-            print(exc.errno)
-            print(exc)
 
         # clean()
         self.is_saving_scheduled = False
@@ -109,13 +104,3 @@ class Store:
     async def save_async(self):
         await asyncio.sleep_ms(100)
         self.save()
-
-
-def clean():
-    try:
-        for f in os.listdir("/data"):
-            if (f.endswith(".mpy")):
-                os.remove("/data/" + f)
-                print("removed")
-    except:
-        print("Error while cleaning..")
