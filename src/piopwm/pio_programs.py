@@ -159,16 +159,16 @@ def trigger_low_high():
 
     mov(y, isr)                      # l
     jmp(not_y, "load")               # l
-    mov(x, osr)[1]  # 2xl
+    mov(x, osr)[1]                   # 2xl
 
     irq(4)
     label("high")
     jmp(y_dec, "high")
-    nop()[2]  # 4h
+    nop()[2]                         # 4h
 
     irq(5)
     label("low")
-    jmp(x_dec, "low")               # l + x
+    jmp(x_dec, "low")                # l + x
 
     wrap()
 
@@ -182,11 +182,11 @@ def triggered_push_pull():
 
     wrap_target()
 
-    mov(y, isr)             .side(0)        # l
-    jmp(not_y, "load")      .side(0)        # l
-    mov(x, osr)             .side(0)        # l
+    mov(y, isr)             .side(0b00)        # l
+    jmp(not_y, "load")      .side(0b00)        # l
+    mov(x, osr)             .side(0b00)        # l
 
-    wait(1, irq, 4)            .side(0)        # l
+    wait(1, irq, 4)            .side(0b00)        # l
     label("high_1")
     jmp(y_dec, "high_1")    .side(0b01)     # h
     wait(1, irq, 5)            .side(0)        # l
