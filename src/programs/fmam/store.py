@@ -1,6 +1,6 @@
 from lib.simple_json_store import Store
 
-DEFAULT_PATH = "/data/fmam.json"
+DEFAULT_PATH = "/store/fmam.json"
 
 DUTY_NS = "ns"
 DUTY_CYCLES = "cycles"

@@ -1,6 +1,6 @@
 from lib.simple_json_store import Store
 
-PATH = "/data/sixpwm.json"
+PATH = "/store/sixpwm.json"
 
 DUTY_NS = "ns"
 DUTY_CYCLES = "cycles"

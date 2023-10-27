@@ -1,6 +1,6 @@
 from lib.simple_json_store import Store
 
-DEFAULT_PATH = "/data/pupapupu.json"
+DEFAULT_PATH = "/store/pupapupu.json"
 
 DUTY_NS = "ns"
 DUTY_CYCLES = "cycles"
