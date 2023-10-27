@@ -45,15 +45,16 @@ class Rotary:
         if new_status == self.last_status:
             return
 
-        self.last_status = new_status
         self.transition = 0b11111111 & self.transition << 4 | self.last_status << 2 | new_status
 
-        if self.transition in [95, 160]:
+        if self.transition in [23, 232]:
             self.event = INC
             self._tsf.set()
-        elif self.transition in [80, 175]:
+        elif self.transition in [43, 212]:
             self.event = DEC
             self._tsf.set()
+
+        self.last_status = new_status
 
     def on_switch(self, pin):
         now = time.ticks_ms()

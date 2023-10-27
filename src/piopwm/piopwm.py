@@ -53,7 +53,7 @@ class PIOPWM:
 
     def high_percent(self):
         period = self.get_period()
-        return round(self.get_high() * 100 / period, 2)
+        return round(self.get_high() / period, 4)
 
     def high_ns(self):
         return round(1/machine_freq() * self.get_high() / 1e-9)

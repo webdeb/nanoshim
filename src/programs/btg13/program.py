@@ -2,7 +2,8 @@ from rp2 import PIO
 
 from lib.ui_program import (UIListProgram)
 from utils import (
-    freq_to_str
+    freq_to_str,
+    percent_str,
 )
 
 from piopwm.piopwm import (
@@ -138,7 +139,7 @@ class Program(UIListProgram):
         pwm = self.pwms[pwm]
 
         if (pwm_duty_mode == store.DUTY_PERCENT):
-            return str(pwm.high_percent()) + "%"
+            return percent_str(pwm.high_percent())
 
         return str(pwm.get_high())
 

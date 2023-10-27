@@ -1,6 +1,6 @@
 import machine
 from lib.ui_program import UIListProgram
-from utils import freq_to_str
+from utils import freq_to_str, percent_str
 from constants import (OUT1, OUT3, OUT4, OUT5)
 from piopwm.piopwm import (
     PIOPWM,
@@ -186,7 +186,7 @@ class Program(UIListProgram):
             self.load_params(PUSHPULL)
 
     def pp_duty_str(self, half):
-        return lambda: str(round(100 * float(store.get_param(PUSHPULL, half + "_percent")), 2)) + "%"
+        return lambda: percent_str(store.get_param(PUSHPULL, half + "_percent"))
 
     """
     .Push Pull
@@ -225,7 +225,7 @@ class Program(UIListProgram):
         pwm_duty_mode = store.get_duty_mode(pwm)
         pwm = self.pwms[pwm]
         if (pwm_duty_mode == store.DUTY_PERCENT):
-            return str(pwm.high_percent()) + "%"
+            return percent_str(pwm.high_percent())
         return str(pwm.get_high())
 
     def get_half(self):
@@ -299,7 +299,8 @@ class Program(UIListProgram):
 
     def update_period(self, pwm, inc, exp_key):
         period = store.get_period(pwm)
-        new_period = round(self.get_value_by_exp(period, inc, exp_key, use_freq=True))
+        new_period = round(self.get_value_by_exp(
+            period, inc, exp_key, use_freq=True))
         self.set_period(pwm, new_period)
 
     def set_period(self, pwm, period):
@@ -315,7 +316,8 @@ class Program(UIListProgram):
     def update_duty(self, pwm, inc, exp_key):
         high = store.get_high(pwm)
         period = store.get_period(pwm)
-        new_duty = min(period - 5, round(self.get_value_by_exp(high, inc, exp_key)))
+        new_duty = min(
+            period - 5, round(self.get_value_by_exp(high, inc, exp_key)))
         self.set_duty(pwm, new_duty)
 
     def set_duty(self, pwm, high):

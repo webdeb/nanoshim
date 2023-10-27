@@ -1,10 +1,10 @@
 def freq_to_str(freq):
     if (freq < 1000):
-        return str(round(freq, 1)) + "Hz"
+        return "%.2fHz" % round(freq, 2)
     elif (freq < 1_000_000):
-        return str(round(freq / 1_000, 2)) + "k"
+        return "%.2fk" % round(freq / 1_000, 2)
     else:
-        return str(round(freq / 1_000_000, 2)) + "M"
+        return "%.2fM" % round(freq / 1_000_000, 2)
 
 
 def ns_to_str(ns):
@@ -16,3 +16,7 @@ def ns_to_str(ns):
         return str(round(ns / 1e6, 2)) + "ms"
     else:
         return str(round(ns / 1e9, 2)) + "s"
+
+
+def percent_str(value):
+    return "%.2f" % round(value * 100, 2) + "%"
