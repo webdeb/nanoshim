@@ -1,6 +1,5 @@
 import os
 import json
-import gc
 import uasyncio as asyncio
 
 
@@ -94,7 +93,6 @@ class Store:
             with open(str(self.path), "w") as f:
                 f.write(json.dumps(data))
                 f.close()
-                gc.collect()
         except OSError as exc:
             print("Error saving to file.", self.path)
 

@@ -34,8 +34,8 @@ class Rotary:
 
         # One handler for every encoder
         self.set_handler(handler)
-        self._waiter = asyncio.create_task(self._run)
         self._tsf = asyncio.ThreadSafeFlag()
+        self._waiter = asyncio.create_task(self._run())
 
     def set_handler(self, handler):
         self.handler = handler
@@ -48,10 +48,10 @@ class Rotary:
         self.last_status = new_status
         self.transition = 0b11111111 & self.transition << 4 | self.last_status << 2 | new_status
 
-        if self.transition in [23, 232]:
+        if self.transition in [95, 160]:
             self.event = INC
             self._tsf.set()
-        elif self.transition in [43, 212]:
+        elif self.transition in [80, 175]:
             self.event = DEC
             self._tsf.set()
 
@@ -73,4 +73,3 @@ class Rotary:
         while True:
             await self._tsf.wait()
             self.handler(self.event)
-            self.event = None
