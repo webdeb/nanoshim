@@ -1,5 +1,6 @@
 from machine import Pin
 import time
+import uasyncio as asyncio
 
 
 def noop(_v):
@@ -13,7 +14,9 @@ TAP = 4
 
 
 class Rotary:
+    event = None
     transition = 0
+    _press_time = 0
 
     def __init__(self, clk, sw, dt, handler=noop):
         self.dt_pin = Pin(dt, Pin.IN, Pin.PULL_UP)
@@ -31,6 +34,8 @@ class Rotary:
 
         # One handler for every encoder
         self.set_handler(handler)
+        self._waiter = asyncio.create_task(self._run)
+        self._tsf = asyncio.ThreadSafeFlag()
 
     def set_handler(self, handler):
         self.handler = handler
@@ -40,15 +45,15 @@ class Rotary:
         if new_status == self.last_status:
             return
 
+        self.last_status = new_status
         self.transition = 0b11111111 & self.transition << 4 | self.last_status << 2 | new_status
 
         if self.transition in [23, 232]:
-            self.handler(INC)
+            self.event = INC
+            self._tsf.set()
         elif self.transition in [43, 212]:
-            self.handler(DEC)
-        self.last_status = new_status
-
-    _press_time = 0
+            self.event = DEC
+            self._tsf.set()
 
     def on_switch(self, pin):
         now = time.ticks_ms()
@@ -61,4 +66,11 @@ class Rotary:
             return
 
         self._press_time = 0
-        self.handler(TAP)
+        self.event = TAP
+        self._tsf.set()
+
+    async def _run(self):
+        while True:
+            await self._tsf.wait()
+            self.handler(self.event)
+            self.event = None
