@@ -1,9 +1,9 @@
 import machine
 from lib.ui_program import UIListProgram
-from utils import freq_to_str, percent_str
-from constants import (OUT1, OUT3, OUT4, OUT5)
+from lib.utils import freq_to_str, percent_str
+from lib.constants import (OUT1, OUT3, OUT4, OUT5)
 from piopwm.piopwm import (
-    PIOPWM,
+    PioPWM,
     WITH_PIN,
     WITH_PIN_INVERTED_ONCE,
     INVERTED_PIN,
@@ -102,23 +102,23 @@ class Program(UIListProgram):
     def start(self):
         clear_programs()
         print("starting...")
-        self.pwms[SYMMETRY] = PIOPWM(
+        self.pwms[SYMMETRY] = PioPWM(
             PWMS[SYMMETRY]["sm"],
             mode=TRIGGER,
             pin=None,
         )
-        self.pwms[PUSHPULL] = PIOPWM(
+        self.pwms[PUSHPULL] = PioPWM(
             PWMS[PUSHPULL]["sm"],
             pin=PWMS[PUSHPULL]["pin"],
             mode=TRIGGERED_PUSH_PULL,
         )
-        self.pwms[PULSE] = PIOPWM(
+        self.pwms[PULSE] = PioPWM(
             PWMS[PULSE]["sm"],
             pin=PWMS[PULSE]["pin"],
             in_pin=PWMS[PHASE]["pin"],
             mode=WITH_PIN,
         )
-        self.pwms[PULSE_INVERTED] = PIOPWM(
+        self.pwms[PULSE_INVERTED] = PioPWM(
             PWMS[PULSE_INVERTED]["sm"],
             pin=PWMS[PULSE_INVERTED]["pin"],
             in_pin=PWMS[PULSE]["pin"],
@@ -194,7 +194,7 @@ class Program(UIListProgram):
 
     def set_phase(self):
         half = min(store.get_half(), 1)
-        self.pwms[PHASE] = PIOPWM(
+        self.pwms[PHASE] = PioPWM(
             PWMS[PHASE]["sm"],
             pin=PWMS[PHASE]["pin"],
             mode=WITH_PIN_INVERTED_ONCE,

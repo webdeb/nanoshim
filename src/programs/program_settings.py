@@ -15,6 +15,8 @@ INIT_STRUCTURE = {
     },
 }
 store = Store(path="/store/settings_store.json", inital_data=INIT_STRUCTURE)
+def set_freq(freq): store.set("settings.machine_freq", freq)
+def get_freq(): store.get("settings.machine_freq")
 
 
 class Settings(UIListProgram):
@@ -29,6 +31,10 @@ class Settings(UIListProgram):
             {
                 "text": ["Freq:", self.get_freq],
                 "handle_change": self.handle_freq_change
+            },
+            {
+                "text": ["Start: ", self.render_autostart],
+                "handle_encoder": self.change_autostart
             }
         ]
 
@@ -36,19 +42,29 @@ class Settings(UIListProgram):
         super().__init__()
 
     def get_freq(self):
-        return str(int(machine.freq()/1_000_000)) + "MHz"
+        return str(int(machine.freq()/1000)) + "kHz"
+
+    """
+    
+    """
 
     def get_contrast(self):
         return str(self.display.get_contrast())
 
-    def handle_freq_change(self, event):
-        freq = int(machine.freq() / 1_000_000)
-        if (event == UIListProgram.INC):
-            freq += 1
-        elif (event == UIListProgram.DEC):
-            freq -= 1
+    def render_autostart(self):
+        return "..."
 
-        machine.freq(max(100, min(200, freq)) * 1_000_000)
+    def change_autostart(self):
+        pass
+
+    def handle_freq_change(self, event):
+        freq = int(machine.freq())
+        if (event == UIListProgram.INC):
+            freq += 1000
+        elif (event == UIListProgram.DEC):
+            freq -= 1000
+
+        machine.freq(max(100_000_000, min(136_000_000, freq)))
 
     def handle_contrast_change(self, event):
         contrast = int(self.display.get_contrast())
@@ -57,3 +73,7 @@ class Settings(UIListProgram):
         elif (event == UIListProgram.DEC):
             contrast -= 10
         self.display.set_contrast(contrast)
+
+    def load_settings():
+        machine.freq(get_freq())
+        display.set_contrast(get_contrast())

@@ -1,8 +1,8 @@
 from rp2 import PIO
-from constants import OUT1, OUT2, OUT3, OUT4, OUT5, OUT6
+from lib.constants import OUT1, OUT2, OUT3, OUT4, OUT5, OUT6
 from lib.ui_program import UIListProgram
-from utils import freq_to_str
-from piopwm.piopwm import PIOPWM, clear_programs
+from lib.utils import freq_to_str
+from piopwm.piopwm import PioPWM, clear_programs
 
 from . import store
 
@@ -25,8 +25,8 @@ PWMS = {
 
 
 class Program(UIListProgram):
-    max_freq_exp = 3  # 1 -> tick.. 2 -> 10%, 3 -> 50%
-    max_duty_exp = 3  # 1 -> tick.. 2 -> 10%, 3 -> 50%
+    max_freq_exp = 4  # 1 -> tick.. 2 -> 10%, 3 -> 50%
+    max_duty_exp = 4  # 1 -> tick.. 2 -> 10%, 3 -> 50%
     title = "6 x PWM"
     pwm_exp = {}
     pwms = {}
@@ -55,7 +55,7 @@ class Program(UIListProgram):
 
         for pwm, settings in PWMS.items():
             print("create PWM ", pwm, settings)
-            self.pwms[pwm] = PIOPWM(settings["sm"], pin=settings["pin"])
+            self.pwms[pwm] = PioPWM(settings["sm"], pin=settings["pin"])
             self.load_params(pwm)
 
         print("started 6 pwms")
@@ -163,8 +163,10 @@ class Program(UIListProgram):
         self.set_duty(pwm, new_duty)
 
     def get_value_by_factor(self, value, inc, factor):
-        if (factor == 2):
+        if (factor == 3):
             return round(value + inc * value * 0.5)
-        if (factor == 1):
+        if (factor == 2):
             return round(value + inc * value * 0.1)
+        if (factor == 1):
+            return round(value + inc * value * 0.01)
         return value + inc * 1

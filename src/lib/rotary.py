@@ -62,7 +62,7 @@ class Rotary:
         if (self._press_time == 0 or pin_value == 0):
             self._press_time = now
             return
-        elif ((now - self._press_time) < 10):
+        elif ((now - self._press_time) < 300):
             self._press_time = 0
             return
 

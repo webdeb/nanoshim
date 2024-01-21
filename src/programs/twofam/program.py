@@ -1,18 +1,18 @@
 from rp2 import PIO
 
 from lib.ui_program import (UIListProgram)
-from utils import (
+from lib.utils import (
     freq_to_str
 )
 
 from piopwm.piopwm import (
-    PIOPWM,
+    PioPWM,
     WITH_PIN,
     WITH_PIN_INVERTED,
     clear_programs
 )
 
-from constants import (OUT1, OUT2, OUT3, OUT4)
+from lib.constants import (OUT1, OUT2, OUT3, OUT4)
 
 from . import store
 
@@ -94,23 +94,23 @@ class Program(UIListProgram):
     def start(self):
         clear_programs()
 
-        self.pwms[PACKAGE] = PIOPWM(
+        self.pwms[PACKAGE] = PioPWM(
             PWMS[PACKAGE]["sm"],
             pin=PWMS[PACKAGE]["pin"]
         )
-        self.pwms[F2_PHASE] = PIOPWM(
+        self.pwms[F2_PHASE] = PioPWM(
             PWMS[F2_PHASE]["sm"],
             pin=PWMS[F2_PHASE]["pin"],
             mode=WITH_PIN_INVERTED,
             in_pin=PWMS[PACKAGE]["pin"]
         )
-        self.pwms[F1] = PIOPWM(
+        self.pwms[F1] = PioPWM(
             PWMS[F1]["sm"],
             pin=PWMS[F1]["pin"],
             in_pin=PWMS[PACKAGE]["pin"],
             mode=WITH_PIN,
         )
-        self.pwms[F2] = PIOPWM(
+        self.pwms[F2] = PioPWM(
             PWMS[F2]["sm"],
             pin=PWMS[F2]["pin"],
             mode=WITH_PIN,

@@ -2,7 +2,7 @@
 from lib.rotary import Rotary, INC, DEC, TAP
 from lib.levels import Levels
 
-from constants import (
+from lib.constants import (
     PIN_ENC_A,
     PIN_ENC_B,
     PIN_ENC_C,

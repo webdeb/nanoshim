@@ -15,8 +15,8 @@ SYSTEN_STRUCTURE = {
         "duty_percent": 0.5,
     },
     "pushpull": {
-        "high": 500,
-        "low": 500,
+        "high": 400,
+        "low": 400,
         "high_percent": 0.5,
         "low_percent": 0.5,
     },

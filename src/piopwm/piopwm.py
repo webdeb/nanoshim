@@ -22,13 +22,14 @@ TRIGGER = 4
 TRIGGERED_PUSH_PULL = 5
 WITH_PIN_INVERTED_ONCE = 6
 INVERTED_PIN = 7
+PROGRAM = 8
 
 MAX_VALUE = (1 << 31) - 1
 
 PIO_PROGRAMS = []
 
 
-class PIOPWM:
+class PioPWM:
     def set_params(self, params):
         high, low = params
         self.high = min(MAX_VALUE, max(1, high - HIGH))
@@ -61,9 +62,13 @@ class PIOPWM:
     def get_freq(self):
         return round(machine_freq()/self.get_period(), 3)
 
-    def __init__(self, id, pin, mode=NORMAL, in_pin=None):
+    def __init__(self, id, pin=None, mode=NORMAL, in_pin=None, program=None, **kwargs):
         freq = machine_freq()
-        if (mode == NORMAL):
+        if (mode == PROGRAM):
+            self.sm = StateMachine(
+                id, prog=program, freq=freq, **kwargs)
+            PIO_PROGRAMS.append((id, program))
+        elif (mode == NORMAL):
             self.sm = StateMachine(id, prog=pwm_program,
                                    freq=freq, sideset_base=Pin(pin))
             PIO_PROGRAMS.append((id, pwm_program))

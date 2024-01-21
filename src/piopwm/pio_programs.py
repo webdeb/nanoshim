@@ -143,11 +143,6 @@ def pushpull_program():
     wrap()
 
 
-"""
-Triggered Push Pull
-"""
-
-
 @asm_pio()
 def trigger_low_high():
     label("load")

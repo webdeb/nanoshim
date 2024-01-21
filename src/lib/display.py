@@ -3,7 +3,7 @@ import framebuf
 import misc.images as images
 import lib.ssd1306 as ssd1306
 from lib.simple_json_store import Store
-from constants import (
+from lib.constants import (
     PIN_SCL,
     PIN_SDA
 )

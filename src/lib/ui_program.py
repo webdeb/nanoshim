@@ -1,13 +1,14 @@
-from user_inputs import (
+from lib.user_inputs import (
     SW1, SW2, SW3, SW4, SW5,
     INC, DEC, TAP,
     get_inputs,
 )
 
-from display import display
+from lib.display import display
 
 
 class UIListProgram:
+    autostartable = False
     title = ""
     display = display
     selected_item = 0
@@ -19,7 +20,9 @@ class UIListProgram:
     DEC = 4
     TAP = 5
 
-    def __init__(self):
+    def __init__(self, on_exit=None):
+        if (on_exit):
+            self.handle_button = on_exit
         self.set_items_text()
 
     def set_items_text(self):
@@ -36,14 +39,15 @@ class UIListProgram:
         Buttons.on(SW5, self.on_sw5)
 
         Encoder.set_handler(self.encoder_handler)
+        self.run()
         self.render()
+
+    def run(self): pass
+    def handle_button(self): pass
 
     def render(self):
         self.display.render_menu(
             self.title, self.items_text, self.selected_item)
-
-    def handle_button(self):
-        pass
 
     def on_sw1(self):
         if ("handle_button" in self.items[self.selected_item]):
@@ -60,18 +64,32 @@ class UIListProgram:
         self.render()
 
     def on_sw4(self):
-        self.event_handler(UIListProgram.MINUS)
+        self.handle_plusminus(UIListProgram.MINUS)
 
     def on_sw5(self):
-        self.event_handler(UIListProgram.PLUS)
+        self.handle_plusminus(UIListProgram.PLUS)
 
     def encoder_handler(self, event):
         if (event == INC):
-            self.event_handler(UIListProgram.INC)
+            self.handle_encoder(UIListProgram.INC)
         elif (event == DEC):
-            self.event_handler(UIListProgram.DEC)
+            self.handle_encoder(UIListProgram.DEC)
         elif (event == TAP):
-            self.event_handler(UIListProgram.TAP)
+            self.handle_encoder(UIListProgram.TAP)
+
+    def handle_encoder(self, event):
+        if ("handle_encoder" in self.items[self.selected_item]):
+            self.items[self.selected_item]["handle_encoder"](event)
+            self.render()
+        else:
+            self.event_handler(event)
+
+    def handle_plusminus(self, event):
+        if ("handle_plusminus" in self.items[self.selected_item]):
+            self.items[self.selected_item]["handle_plusminus"](event)
+            self.render()
+        else:
+            self.event_handler(event)
 
     def event_handler(self, event):
         if ("handle_change" in self.items[self.selected_item]):

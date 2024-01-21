@@ -1,6 +1,6 @@
 from machine import Pin
 from neopixel import NeoPixel
-from constants import PIN_RGB_LED
+from lib.constants import PIN_RGB_LED
 import misc.colors as colors
 
 
