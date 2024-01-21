@@ -32,6 +32,7 @@ PWMS = {
 class Program(UIListProgram):
     max_exp = 4  # 1 -> tick.. 2 -> 10%, 3 -> 50%
     title = "4P"
+    autostartable = True
     pwm_exp = {
         "symmetry_freq": 0,
         "symmetry_duty": 0,

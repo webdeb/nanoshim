@@ -1,6 +1,7 @@
+import machine
 from lib.ui_program import UIListProgram
 from lib.simple_json_store import Store
-import machine
+from lib.autostart import autostartable, get_autostart_title, set_autostart_title
 
 """
 Store
@@ -11,7 +12,7 @@ INIT_STRUCTURE = {
     "version": 3,
     "settings": {
         "contrast": 200,
-        "machine_freq": 125_000_000
+        "machine_freq": 125_000_000,
     },
 }
 store = Store(path="/store/settings_store.json", inital_data=INIT_STRUCTURE)
@@ -33,7 +34,7 @@ class Settings(UIListProgram):
                 "handle_change": self.handle_freq_change
             },
             {
-                "text": ["Start: ", self.render_autostart],
+                "text": ["Start:", self.render_autostart],
                 "handle_encoder": self.change_autostart
             }
         ]
@@ -48,14 +49,29 @@ class Settings(UIListProgram):
     
     """
 
+    def render_autostart(self):
+        print("as title:", get_autostart_title())
+        return get_autostart_title()[0:8]
+
+    def change_autostart(self, event):
+        if (event not in [UIListProgram.INC, UIListProgram.DEC]):
+            return
+
+        idx = 0
+        if (get_autostart_title() in autostartable):
+            idx = autostartable.index(get_autostart_title())
+
+        count = len(autostartable)
+
+        if (event == UIListProgram.INC):
+            idx = (idx + 1) % count
+        elif (event == UIListProgram.DEC):
+            idx = (idx - 1) % count
+
+        set_autostart_title(autostartable[idx])
+
     def get_contrast(self):
         return str(self.display.get_contrast())
-
-    def render_autostart(self):
-        return "..."
-
-    def change_autostart(self):
-        pass
 
     def handle_freq_change(self, event):
         freq = int(machine.freq())

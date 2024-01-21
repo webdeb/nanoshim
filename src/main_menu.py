@@ -1,6 +1,6 @@
 import os
 from lib.menu import Menu
-from lib.autostart import get_autostart
+from lib.autostart import get_autostart, add_to_autostartable
 # PWM Programms
 from programs.pppp.program import Program as PPPP
 from programs.sixpwm.program import Program as SixPWM
@@ -37,6 +37,7 @@ async def create_main_menu():
         print("No custom programs")
 
     main_menu = Menu(main_menu_items)
+    add_to_autostartable("Menu", main_menu)
     autostart_program = get_autostart()
     if (autostart_program):
         autostart_program.start()

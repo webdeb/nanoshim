@@ -8,12 +8,18 @@ store = Store("/store/autostart.json", {
 autostart_program = None
 autostartable = []
 
-prev_autostart_title = store.get("title")
+
+def get_autostart_title():
+    return store.get("title")
 
 
-def add_to_autostartable(instance, title):
-    autostartable.append((instance, title))
-    if (prev_autostart_title == title):
+def set_autostart_title(title):
+    store.set("title", title)
+
+
+def add_to_autostartable(title, instance):
+    autostartable.append(title)
+    if (get_autostart_title() == title):
         autostart(instance)
 
 

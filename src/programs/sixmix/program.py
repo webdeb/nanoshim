@@ -9,7 +9,6 @@ from piopwm import PioPWM, TRIGGER, PROGRAM, clear_programs
 from piopwm.pio_programs import HIGH, LOW
 
 from lib.utils import ns_to_str, ticks_to
-from lib.autostart import autostart
 
 store = Store("/store/sixmix.json", {
     "version": 1,
