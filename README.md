@@ -1,4 +1,4 @@
-# nanoSHIM aka HACKPWM
+# HackPWM
 
 <img src="https://github.com/webdeb/nanoshim/assets/14992140/7e6a05b5-28bf-47a2-9062-699df4bb3fd5" width="600px" />
 
