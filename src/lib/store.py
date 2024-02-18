@@ -74,7 +74,7 @@ class Store:
                     obj = obj[part]
             return obj
         except:
-            print(path)
+            print(path, "Error")
             return 0
 
     def load(self):
@@ -102,3 +102,22 @@ class Store:
     async def save_async(self):
         await asyncio.sleep_ms(100)
         self.save()
+
+
+class ChildStore():
+    parent_store = None
+
+    def __init__(self, key, initial_data):
+        self.key = str(key)
+        self.initial_data = initial_data
+
+    def set_parent_store(self, store: Store):
+        self.parent_store = store
+        if (self.initial_data.get("version") != self.get("version")):
+            self.parent_store.set(self.key, self.initial_data)
+
+    def get(self, key):
+        return self.parent_store.get(f"{self.key}.{key}")
+
+    def set(self, key, value):
+        return self.parent_store.set(f"{self.key}.{key}", value)

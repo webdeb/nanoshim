@@ -1,4 +1,4 @@
-from .ui_program import UIListProgram
+from lib.ui_program import UIListProgram
 import machine
 
 
@@ -28,7 +28,7 @@ class WithExp():
         if (exp_key not in self.exp):
             self.exp[exp_key] = 0
 
-        return self.exp[exp_key]
+        return self.exp[exp_key] + 1
 
     def get_value_by_exp(self, value, inc, exp_key, use_freq=False):
         if (inc not in [-1, 1]):

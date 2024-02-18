@@ -1,30 +1,21 @@
-from rp2 import PIO
 from lib.constants import OUT1, OUT2, OUT3, OUT4, OUT5, OUT6
-from lib.ui_program import UIListProgram
 from lib.utils import freq_to_str
-from piopwm.piopwm import PioPWM, clear_programs
+from piopwm.piopwm import PioPWM
+from hackpwm.pwm_system import PWMSystem
 
 from . import store
 
-F1 = "f1"
-F2 = "f2"
-F3 = "f3"
-F4 = "f4"
-F5 = "f5"
-F6 = "f6"
-
 PWMS = {
-    F1:       {"pin": OUT1, "sm": 0},
-    F2:       {"pin": OUT2, "sm": 1},
-    F3:       {"pin": OUT3, "sm": 2},
-
-    F4:       {"pin": OUT4, "sm": 4},
-    F5:       {"pin": OUT5, "sm": 5},
-    F6:       {"pin": OUT6, "sm": 6},
+    "f1":       {"pin": OUT1, "sm": 0},
+    "f2":       {"pin": OUT2, "sm": 1},
+    "f3":       {"pin": OUT3, "sm": 2},
+    "f4":       {"pin": OUT4, "sm": 4},
+    "f5":       {"pin": OUT5, "sm": 5},
+    "f6":       {"pin": OUT6, "sm": 6},
 }
 
 
-class Program(UIListProgram):
+class Program(PWMSystem):
     max_freq_exp = 4  # 1 -> tick.. 2 -> 10%, 3 -> 50%
     max_duty_exp = 4  # 1 -> tick.. 2 -> 10%, 3 -> 50%
     title = "6 x PWM"
@@ -32,37 +23,29 @@ class Program(UIListProgram):
     pwms = {}
 
     def __init__(self, on_exit):
-        self.handle_button = on_exit
+        self.on_exit = on_exit
         self.items = []
 
         for name in sorted(PWMS.keys()):
-            self.items.append({
-                "text": [[f"{name}:", self.get_exp(f"{name}_freq")], self.freq_str(name)],
-                "handle_change": lambda event, name=name: self.change_freq(pwm=name, event=event),
-            })
-            self.pwm_exp[f"{name}_freq"] = 0
-
-            self.items.append({
-                "text": [["Duty:", self.get_exp(f"{name}_duty")], self.duty_str(name)],
-                "handle_change": lambda event, name=name: self.change_duty(pwm=name, event=event),
-            })
-            self.pwm_exp[f"{name}_duty"] = 0
+            self.items.extend([
+                {
+                    "text": [[f"{name}:", self.exp_renderer(f"{name}_freq")], lambda event: self.update_period(name, event)],
+                    "handle_plusminus": self.exp_updater(f"{name}_freq"),
+                    "handle_encoder": lambda event: self.update_period(pwm=name, event=event),
+                },
+                {
+                    "text": [["Duty:", self.exp_renderer(f"{name}_duty")], self.duty_str(name)],
+                    "handle_plusminus": self.exp_updater(f"{name}_duty"),
+                    "handle_change": lambda event: self.change_duty(pwm=name, event=event),
+                }
+            ])
 
         super().__init__()
 
-    def start(self):
-        clear_programs()
-
+    def run(self):
         for pwm, settings in PWMS.items():
-            print("create PWM ", pwm, settings)
             self.pwms[pwm] = PioPWM(settings["sm"], pin=settings["pin"])
             self.load_params(pwm)
-
-        print("started 6 pwms")
-        super().start()
-
-    def get_exp(self, exp_name):
-        return lambda: "x" + str(self.pwm_exp[exp_name] + 1)
 
     def freq_str(self, pwm):
         return lambda: freq_to_str(self.pwms[pwm].get_freq())
@@ -81,47 +64,15 @@ class Program(UIListProgram):
 
         return str(pwm.get_high())
 
-    def render(self):
-        items_text = list(map(lambda i: i["text"], self.items))
-        self.display.render_menu(self.title, items_text, self.selected_item)
-
-    def change_freq(self, pwm, event):
-        exp_key = pwm + "_freq"
-        if (exp_key not in self.pwm_exp):
-            self.pwm_exp[exp_key] = 0
-
-        exp = self.pwm_exp[exp_key]
-
-        if (event == UIListProgram.MINUS):
-            self.pwm_exp[exp_key] = (exp - 1) % self.max_freq_exp
-        if (event == UIListProgram.PLUS):
-            self.pwm_exp[exp_key] = (exp + 1) % self.max_freq_exp
-        elif (event == UIListProgram.INC):
-            self.update_period(pwm, -1, exp)
-        elif (event == UIListProgram.DEC):
-            self.update_period(pwm, 1, exp)
-
-        self.render()
-
     def change_duty(self, pwm, event):
         exp_key = pwm + "_duty"
-        if (exp_key not in self.pwm_exp):
-            self.pwm_exp[exp_key] = 0
-
-        exp = self.pwm_exp[exp_key]
-
-        if (event == UIListProgram.TAP):
+        if (event == PWMSystem.TAP):
             self.switch_duty_mode(pwm)
-        elif (event == UIListProgram.PLUS):
-            self.pwm_exp[exp_key] = (exp + 1) % self.max_duty_exp
-        elif (event == UIListProgram.MINUS):
-            self.pwm_exp[exp_key] = (exp - 1) % self.max_duty_exp
-        elif (event == UIListProgram.INC):
-            self.update_duty(pwm, 1, exp)
-        elif (event == UIListProgram.DEC):
-            self.update_duty(pwm, -1, exp)
-
-        self.render()
+        else:
+            high = store.get_high(pwm)
+            new_duty = self.get_value_by_exp(
+                high, self.dir_to_inc(event), self.get_exp(exp_key))
+            self.set_duty(pwm, new_duty)
 
     def switch_duty_mode(self, pwm):
         prev_mode = str(store.get_duty_mode(pwm))
@@ -129,10 +80,10 @@ class Program(UIListProgram):
         new_duty_mode = store.DUTY_MODES[(idx + 1) % len(store.DUTY_MODES)]
         store.set_duty_mode(pwm, new_duty_mode)
 
-    def update_period(self, pwm, inc, factor):
-        period = store.get_period(pwm)
-        new_period = self.get_value_by_factor(period, inc, factor)
-        self.set_period(pwm, new_period)
+    def update_period(self, pwm, event):
+        exp_key = f"{pwm}_freq"
+        self.set_period(pwm, self.get_value_by_exp(
+            store.get_period(pwm), self.dir_to_inc(event), exp_key))
 
     def set_period(self, pwm, period):
         high = store.get_high(pwm)
@@ -156,17 +107,3 @@ class Program(UIListProgram):
     def load_params(self, pwm):
         params = store.get_params(pwm)
         self.pwms[pwm].set_params(params)
-
-    def update_duty(self, pwm, inc, factor):
-        high = store.get_high(pwm)
-        new_duty = self.get_value_by_factor(high, inc, factor)
-        self.set_duty(pwm, new_duty)
-
-    def get_value_by_factor(self, value, inc, factor):
-        if (factor == 3):
-            return round(value + inc * value * 0.5)
-        if (factor == 2):
-            return round(value + inc * value * 0.1)
-        if (factor == 1):
-            return round(value + inc * value * 0.01)
-        return value + inc * 1

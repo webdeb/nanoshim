@@ -1,4 +1,4 @@
-from lib.simple_json_store import Store
+from lib.store import Store
 
 DEFAULT_PATH = "/store/twofam.json"
 

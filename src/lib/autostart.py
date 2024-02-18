@@ -1,4 +1,4 @@
-from lib.simple_json_store import Store
+from lib.store import Store
 
 store = Store("/store/autostart.json", {
     "version": 1,
@@ -10,7 +10,11 @@ autostartable = []
 
 
 def get_autostart_title():
-    return store.get("title")
+    title = store.get("title")
+    if (title is ""):
+        return "Menu"
+
+    return title
 
 
 def set_autostart_title(title):

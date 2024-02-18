@@ -11,7 +11,7 @@ from piopwm.piopwm import (
     WITH_PIN_INVERTED,
     clear_programs
 )
-
+from hackpwm.pwm_system import PWMSystem
 from lib.constants import (OUT1, OUT2, OUT3, OUT4)
 
 from . import store
@@ -29,46 +29,37 @@ PWMS = {
 }
 
 
-class Program(UIListProgram):
-    max_freq_exp = 3  # 1 -> tick.. 2 -> 10%, 3 -> 50%
-    max_duty_exp = 3  # 1 -> tick.. 2 -> 10%, 3 -> 50%
-
+class Program(PWMSystem):
     title = "2F AM"
-    pwm_exp = {
-        "f1_freq": 0,
-        "f1_duty": 0,
-        "f2_freq": 0,
-        "f2_duty": 0,
-        "f2_phase_duty": 0,
-        "package_freq": 0,
-        "package_duty": 0,
-    }
-
     pwms = {}
 
     def __init__(self, on_exit):
-        self.handle_button = on_exit
+        self.on_exit = on_exit
         self.items = [
             # """
             # F1
             # """
             {
-                "text": [["F1:", self.get_exp("f1_freq")], self.freq_str(F1)],
+                "text": [["F1:", self.exp_renderer("f1_freq")], self.freq_str(F1)],
+                "handle_plusminus": self.exp_updater("f1_freq"),
                 "handle_change": lambda event: self.change_freq(F1, event),
             },
             {
-                "text": [["Duty:", self.get_exp("f1_duty")], self.duty_str(F1)],
+                "text": [["Duty:", self.exp_renderer("f1_duty")], self.duty_str(F1)],
+                "handle_plusminus": self.exp_updater("f1_duty"),
                 "handle_change": lambda event: self.change_duty(F1, event),
             },
             # """
             # Package
             # """
             {
-                "text": [["P:", self.get_exp("package_freq")], self.freq_str(PACKAGE)],
+                "text": [["P:", self.exp_renderer("package_freq")], self.freq_str(PACKAGE)],
+                "handle_plusminus": self.exp_updater("package_freq"),
                 "handle_change": lambda event: self.change_freq(PACKAGE, event),
             },
             {
-                "text": [["Duty:", self.get_exp("package_duty")], self.duty_str(PACKAGE)],
+                "text": [["Duty:", self.exp_renderer("package_duty")], self.duty_str(PACKAGE)],
+                "handle_plusminus": self.exp_updater("package_duty"),
                 "handle_change": lambda event: self.change_duty(PACKAGE, event),
             },
 
@@ -76,15 +67,18 @@ class Program(UIListProgram):
             # F2
             # """
             {
-                "text": [["F2:", self.get_exp("f2_freq")], self.freq_str(F2)],
+                "text": [["F2:", self.exp_renderer("f2_freq")], self.freq_str(F2)],
+                "handle_plusminus": self.exp_updater("f2_freq"),
                 "handle_change": lambda event: self.change_freq(F2, event),
             },
             {
-                "text": [["Duty:", self.get_exp("f2_duty")], self.duty_str(F2)],
+                "text": [["Duty:", self.exp_renderer("f2_duty")], self.duty_str(F2)],
+                "handle_plusminus": self.exp_updater("f2_duty"),
                 "handle_change": lambda event: self.change_duty(F2, event),
             },
             {
-                "text": [["Phase:", self.get_exp("f2_phase_duty")], self.duty_str(F2_PHASE)],
+                "text": [["Phase:", self.exp_renderer("f2_phase_duty")], self.duty_str(F2_PHASE)],
+                "handle_plusminus": self.exp_updater("f2_phase_duty"),
                 "handle_change": lambda event: self.change_duty(F2_PHASE, event),
             },
         ]
@@ -124,8 +118,8 @@ class Program(UIListProgram):
 
         super().start()
 
-    def get_exp(self, exp_name):
-        return lambda: "x" + str(self.pwm_exp[exp_name] + 1)
+    # def get_exp(self, exp_name):
+    #     return lambda: "x" + str(self.pwm_exp[exp_name] + 1)
 
     def freq_str(self, pwm):
         return lambda: freq_to_str(self.pwms[pwm].get_freq())
@@ -148,52 +142,24 @@ class Program(UIListProgram):
 
     def change_freq(self, pwm, event):
         exp_key = pwm + "_freq"
-        if (exp_key not in self.pwm_exp):
-            self.pwm_exp[exp_key] = 0
-
-        exp = self.pwm_exp[exp_key]
-
-        if (event == UIListProgram.MINUS):
-            self.pwm_exp[exp_key] = (exp - 1) % self.max_freq_exp
-        if (event == UIListProgram.PLUS):
-            self.pwm_exp[exp_key] = (exp + 1) % self.max_freq_exp
-        elif (event == UIListProgram.INC):
-            self.update_period(pwm, -1, exp)
-        elif (event == UIListProgram.DEC):
-            self.update_period(pwm, 1, exp)
-
-        self.render()
+        if (event in [UIListProgram.INC, UIListProgram.DEC]):
+            period = store.get_period(pwm)
+            self.set_period(pwm, self.get_value_by_exp(
+                period, self.dir_to_inc(event, invert=True), exp_key))
 
     def change_duty(self, pwm, event):
         exp_key = pwm + "_duty"
-        if (exp_key not in self.pwm_exp):
-            self.pwm_exp[exp_key] = 0
-
-        exp = self.pwm_exp[exp_key]
-
         if (event == UIListProgram.TAP):
             self.switch_duty_mode(pwm)
-        elif (event == UIListProgram.PLUS):
-            self.pwm_exp[exp_key] = (exp + 1) % self.max_duty_exp
-        elif (event == UIListProgram.MINUS):
-            self.pwm_exp[exp_key] = (exp + 1) % self.max_duty_exp
-        elif (event == UIListProgram.INC):
-            self.update_duty(pwm, 1, exp)
-        elif (event == UIListProgram.DEC):
-            self.update_duty(pwm, -1, exp)
-
-        self.render()
+        else:
+            self.update_duty(pwm, self.dir_to_inc(
+                event), self.get_exp(exp_key))
 
     def switch_duty_mode(self, pwm):
         prev_mode = str(store.get_duty_mode(pwm))
         idx = store.DUTY_MODES.index(prev_mode)
         new_duty_mode = store.DUTY_MODES[(idx + 1) % len(store.DUTY_MODES)]
         store.set_duty_mode(pwm, new_duty_mode)
-
-    def update_period(self, pwm, inc, factor):
-        period = store.get_period(pwm)
-        new_period = self.get_value_by_factor(period, inc, factor)
-        self.set_period(pwm, new_period)
 
     def set_period(self, pwm, period):
         high = store.get_high(pwm)
@@ -205,6 +171,11 @@ class Program(UIListProgram):
 
         self.load_params(pwm)
 
+    def update_duty(self, pwm, inc, factor):
+        high = store.get_high(pwm)
+        new_duty = self.get_value_by_exp(high, inc, factor)
+        self.set_duty(pwm, new_duty)
+
     def set_duty(self, pwm, high):
         period = store.get_period(pwm)
         low = period - high
@@ -213,20 +184,6 @@ class Program(UIListProgram):
         store.reset_percent(pwm)
 
         self.load_params(pwm)
-
-    def update_duty(self, pwm, inc, factor):
-        high = store.get_high(pwm)
-        new_duty = self.get_value_by_factor(high, inc, factor)
-        self.set_duty(pwm, new_duty)
-
-    def get_value_by_factor(self, value, inc, factor):
-        if (factor == 3):
-            return round(value + inc * value * 0.5)
-        if (factor == 2):
-            return round(value + inc * value * 0.1)
-        if (factor == 1):
-            return round(value + inc * value * 0.01)
-        return value + inc * 1
 
     def load_params(self, pwm):
         params = store.get_params(pwm)

@@ -1,7 +1,9 @@
 import machine
 from lib.ui_program import UIListProgram
-from lib.simple_json_store import Store
+from lib.store import Store
 from lib.autostart import autostartable, get_autostart_title, set_autostart_title
+
+VERSION = "v1.1.1"
 
 """
 Store
@@ -36,6 +38,9 @@ class Settings(UIListProgram):
             {
                 "text": ["Start:", self.render_autostart],
                 "handle_encoder": self.change_autostart
+            },
+            {
+                "text": ["Vers:", lambda: VERSION]
             }
         ]
 
@@ -43,14 +48,13 @@ class Settings(UIListProgram):
         super().__init__()
 
     def get_freq(self):
-        return str(int(machine.freq()/1000)) + "kHz"
+        return str(int(machine.freq()/1_000_000)) + "MHz"
 
     """
     
     """
 
     def render_autostart(self):
-        print("as title:", get_autostart_title())
         return get_autostart_title()[0:8]
 
     def change_autostart(self, event):
@@ -76,9 +80,9 @@ class Settings(UIListProgram):
     def handle_freq_change(self, event):
         freq = int(machine.freq())
         if (event == UIListProgram.INC):
-            freq += 1000
+            freq += 1000000
         elif (event == UIListProgram.DEC):
-            freq -= 1000
+            freq -= 1000000
 
         machine.freq(max(100_000_000, min(136_000_000, freq)))
 

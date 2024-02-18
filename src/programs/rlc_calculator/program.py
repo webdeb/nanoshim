@@ -4,16 +4,15 @@ from lib.with_exp import WithExp
 from lib.units import LRenderer, FRenderer, CRenderer
 
 C = "C"
-I = "L"
+L = "L"
 F = "F"
-MODES = ["C", "L", "F"]
+MODES = [C, L, F]
 PI = 3.14159265359
 
 
 class Program(UIListProgram, WithExp):
     title = "LC Calculator"
-
-    mode = "C"
+    mode = C
 
     def get_mode(self):
         return self.mode
@@ -23,8 +22,6 @@ class Program(UIListProgram, WithExp):
             self.mode = MODES[(MODES.index(self.mode) - 1) % len(MODES)]
         if (event == UIListProgram.INC):
             self.mode = MODES[(MODES.index(self.mode) + 1) % len(MODES)]
-        self.items = self.get_items()
-        self.set_items_text()
         self.calculate()
 
     def get_mode_field(self):

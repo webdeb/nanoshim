@@ -16,7 +16,7 @@ TAP = 4
 class Rotary:
     event = None
     transition = 0
-    _press_time = 0
+    _press_time = float('inf')
 
     def __init__(self, clk, sw, dt, handler=noop):
         self.dt_pin = Pin(dt, Pin.IN, Pin.PULL_UP)
@@ -56,19 +56,22 @@ class Rotary:
 
         self.last_status = new_status
 
+    """
+    " Start Counter on pin 1
+    " If release, check if pin is 0 and duration >300ms
+    """
+
     def on_switch(self, pin):
         now = time.ticks_ms()
         pin_value = pin.value()
-        if (self._press_time == 0 or pin_value == 0):
-            self._press_time = now
-            return
-        elif ((now - self._press_time) < 300):
-            self._press_time = 0
-            return
 
-        self._press_time = 0
-        self.event = TAP
-        self._tsf.set()
+        if (pin_value == 0):
+            self._press_time = now
+
+        elif (pin_value == 1 and (now - self._press_time) > 300):
+            self._press_time = float("inf")
+            self.event = TAP
+            self._tsf.set()
 
     async def _run(self):
         while True:

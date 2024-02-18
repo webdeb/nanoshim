@@ -1,5 +1,8 @@
 from rp2 import PIO, StateMachine
 from machine import Pin, freq as machine_freq
+from misc.rgbled import Led
+import uasyncio as asyncio
+
 from .pio_programs import (
     pwm_program,
     trigger_low_high,
@@ -34,11 +37,21 @@ class PioPWM:
         high, low = params
         self.high = min(MAX_VALUE, max(1, high - HIGH))
         self.low = min(MAX_VALUE, max(1, low - LOW))
+        if (self.sm.active()):
+            self.apply_params()
+
+    def active(self, on=1):
+        if (on):
+            self.apply_params()
+
+        self.sm.active(on)
+
+    def apply_params(self):
         self.sm.put(self.high)
         self.sm.put(self.low)
+
         # clear isr which forces a jump to "load"
         self.sm.exec("in_(null, 32)")
-        self.sm.active(1)
 
     def get_params(self):
         return self.get_high(), self.get_low()
@@ -121,3 +134,12 @@ def clear_programs():
 
         PIO(pio).state_machine(sid % 4).active(0)
         PIO(pio).remove_program(program)
+
+# async def start_pwm_status_led():
+#     while (True):
+#         if (len(PIO_PROGRAMS) > 0):
+#             Led(Led.COLORS.red)
+#         else:
+#             Led.normal()
+
+#         await asyncio.sleep_ms(100)

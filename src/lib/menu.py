@@ -12,10 +12,10 @@ class Menu(UIListProgram):
     def create_program_item(self, instance):
         if (not isinstance(instance, UIListProgram)):
             instance = instance(on_exit=self.start)
-            if (hasattr(instance, "title") and instance.autostartable):
-                add_to_autostartable(instance.title, instance)
         elif (isinstance(instance, Menu)):
             self.add_back_button_to_menu_instance(instance)
+        if (hasattr(instance, "title") and instance.autostartable):
+            add_to_autostartable(instance.title, instance)
 
         return {
             "text": instance.title,
@@ -27,5 +27,3 @@ class Menu(UIListProgram):
             "text": "< Back",
             "handle_button": self.start
         }] + instance.items
-
-        instance.set_items_text()

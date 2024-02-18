@@ -2,7 +2,7 @@ from machine import Pin, I2C
 import framebuf
 import misc.images as images
 import lib.ssd1306 as ssd1306
-from lib.simple_json_store import Store
+from lib.store import Store
 from lib.constants import (
     PIN_SCL,
     PIN_SDA

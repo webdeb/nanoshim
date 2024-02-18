@@ -1,11 +1,11 @@
-from lib.simple_json_store import Store
+from lib.store import Store
 
 DEFAULT_PATH = "/store/pppp.json"
 
 DUTY_NS = "ns"
 DUTY_CYCLES = "cycles"
 DUTY_PERCENT = "%"
-DUTY_MODES = [DUTY_NS, DUTY_CYCLES, DUTY_PERCENT]
+DUTY_MODES = [DUTY_NS, DUTY_PERCENT]
 
 SYSTEN_STRUCTURE = {
     "symmetry": {
@@ -25,20 +25,20 @@ SYSTEN_STRUCTURE = {
         "low": 380,
         "count": 10,
         "phase": 10,
-        "duty_mode": DUTY_CYCLES,
+        "duty_mode": DUTY_NS,
         "duty_percent": 0,
     },
     "phase": {
         "high": 15,
         "low": 20,
-        "duty_mode": DUTY_CYCLES,
+        "duty_mode": DUTY_NS,
         "duty_percent": 0,
         "half": 0,
     }
 }
 
 INIT_STRUCTURE = {
-    "version": 2,
+    "version": 3,
     "system": SYSTEN_STRUCTURE,
     "saved": {}
 }

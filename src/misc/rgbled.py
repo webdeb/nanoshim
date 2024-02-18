@@ -7,13 +7,13 @@ import misc.colors as colors
 class LED(NeoPixel):
     intensity = 0.05
     COLORS = colors
+    DEFAULT = colors.off
 
     def __init__(self, pin: Pin, n: int, *, bpp: int = 3, timing=1):
         super().__init__(pin, n, bpp=bpp, timing=timing)
         self.off()
 
     def __call__(self, color):
-        print("Led ..", color)
         color = (
             round(color[0] * self.intensity),
             round(color[1] * self.intensity),
@@ -25,6 +25,9 @@ class LED(NeoPixel):
 
     def off(self):
         self(LED.COLORS.off)
+
+    def normal(self):
+        self(self.DEFAULT)
 
 
 Led = LED(Pin(PIN_RGB_LED), 1)

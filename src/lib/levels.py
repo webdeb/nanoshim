@@ -1,13 +1,16 @@
 import uasyncio as asyncio
 from machine import ADC
 import time
+import gc
 
 
 class Levels:
     _last_level = None
-    debounce_ms = 5
+    debounce_ms = 30
     none_level = 65000
     callbacks = {}
+    long_callbacks = {}
+    long_press = 1000
 
     def __init__(self, pin, levels, cb):
         self.cb = cb
@@ -18,29 +21,61 @@ class Levels:
     def on(self, level, cb):
         self.callbacks[level] = cb
 
+    def on_long(self, level, cb):
+        self.long_callbacks[level] = cb
+
     async def watch(self):
         while True:
-            state = self.adc.read_u16()
             for level in self.levels:
-                if self.is_level(state, level):
-                    # The same level must be hold for some time to trigger,
-                    # to avoid spontanous triggering due to static discharges etc.
-                    # await asyncio.sleep_ms(5)
+                if self.is_level(self.adc.read_u16(), level):
+                    # print("level", level)
+                    start = time.ticks_ms()
+                    long_press = False
+                    press_duration = 0
 
-                    if self.is_level(self.adc.read_u16(), level) and await self.release():
+                    # wait hold
+                    while (True):
+                        is_level = self.is_level(
+                            self.adc.read_u16(), level)
+
+                        if (not is_level):
+                            break
+
+                        press_duration = time.ticks_ms() - start
+                        if (press_duration > 1000):
+                            long_press = True
+                            # print("long press", level)
+                            break
+
+                        await asyncio.sleep_ms(1)
+
+                    if (long_press):
+                        print("long press")
+                        asyncio.create_task(self._long_cb(level))
+                    elif (press_duration > 10):
+                        # print("normal press")
                         asyncio.create_task(self._cb(level))
-                        self._last_level = level
-                        break
+
+                    await self.wait_release(level)
+                    gc.collect()
+                    break
+
             await asyncio.sleep_ms(self.debounce_ms)
 
-    async def release(self):
-        now = time.ticks_ms()
-        while (now + 1000) > time.ticks_ms():
-            if self.is_level(self.adc.read_u16(), self.none_level):
-                return True
+    async def wait_release(self, level):
+        while (True):
+            adc_level = self.adc.read_u16()
+            is_level = self.is_level(adc_level, level)
+            if (not is_level):
+                break
             await asyncio.sleep_ms(1)
 
-        return False
+        # print("released", adc_level, level, is_level)
+        return True
+
+    async def _long_cb(self, level):
+        if (level in self.long_callbacks and callable(self.long_callbacks[level])):
+            self.long_callbacks[level]()
 
     async def _cb(self, level):
         if (level in self.callbacks and callable(self.callbacks[level])):
@@ -50,7 +85,7 @@ class Levels:
 
     def is_level(self, state, level):
         # Determine the correct level by providing a narrow window for the level
-        return min(level - 1000, level * 0.8) < state < max(level * 1.2, level + 1000)
+        return min(level - 3000, level * 0.2) < state < max(level * 1.2, level + 3000)
 
 
 """

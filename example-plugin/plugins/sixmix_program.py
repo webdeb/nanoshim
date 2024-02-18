@@ -1,7 +1,7 @@
 from machine import Pin
 from rp2 import asm_pio, PIO
 from lib.ui_program import UIListProgram
-from lib.simple_json_store import Store
+from lib.store import Store
 from lib.with_exp import WithExp
 from lib.constants import OUT1, OUT6
 from piopwm import PioPWM, TRIGGER, PROGRAM

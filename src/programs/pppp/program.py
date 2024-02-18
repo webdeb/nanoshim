@@ -1,15 +1,12 @@
-import machine
-from lib.ui_program import UIListProgram
+from hackpwm.pwm_system import PWMSystem
 from lib.utils import freq_to_str, percent_str
 from lib.constants import (OUT1, OUT3, OUT4, OUT5)
 from piopwm.piopwm import (
     PioPWM,
     WITH_PIN,
     WITH_PIN_INVERTED_ONCE,
-    INVERTED_PIN,
     TRIGGER,
     TRIGGERED_PUSH_PULL,
-    clear_programs,
 )
 
 from . import store
@@ -29,80 +26,67 @@ PWMS = {
 }
 
 
-class Program(UIListProgram):
-    max_exp = 4  # 1 -> tick.. 2 -> 10%, 3 -> 50%
+class Program(PWMSystem):
     title = "4P"
-    autostartable = True
-    pwm_exp = {
-        "symmetry_freq": 0,
-        "symmetry_duty": 0,
-
-        "high_duty": 0,
-        "low_duty": 0,
-
-        "pulse_freq": 0,
-        "pulse_duty": 0,
-        "pulse_phase": 0,
-
-        "phase_freq": 0,
-        "phase_duty": 0,
-    }
-
-    pwms = {}
 
     def __init__(self, on_exit):
-        self.handle_button = on_exit
+        self.on_exit = on_exit
         self.items = [
             # """
             # F1
             # """
             {
-                "text": [["PP:", self.exp_str("symmetry_freq")], self.freq_str(SYMMETRY)],
-                "handle_change": lambda event: self.change_pp_freq(event),
+                "text": [["PP:", self.exp_renderer("symmetry_freq")], self.freq_str(SYMMETRY)],
+                "handle_plusminus": self.exp_updater("symmetry_freq"),
+                "handle_encoder": self.change_pp_freq,
             },
             {
-                "text": [["Sym:", self.exp_str("symmetry_duty")], self.duty_str(SYMMETRY)],
-                "handle_change": lambda event: self.change_pp_symmetry(event),
+                "text": [["Sym:", self.exp_renderer("symmetry_duty")], self.duty_str(SYMMETRY)],
+                "handle_plusminus": self.exp_updater("symmetry_duty"),
+                "handle_encoder": self.change_pp_symmetry,
             },
             {
-                "text": [["D1:", self.exp_str("high_duty")], self.pp_duty_str("high")],
-                "handle_change": lambda event: self.change_pp_duty(event, "high"),
+                "text": [["D1:", self.exp_renderer("high_duty")], self.pp_duty_str("high")],
+                "handle_plusminus": self.exp_updater("high_duty"),
+                "handle_encoder": lambda event: self.change_pp_duty(event, "high"),
             },
             {
-                "text": [["D2:", self.exp_str("low_duty")], self.pp_duty_str("low")],
-                "handle_change": lambda event: self.change_pp_duty(event, "low"),
+                "text": [["D2:", self.exp_renderer("low_duty")], self.pp_duty_str("low")],
+                "handle_plusminus": self.exp_updater("low_duty"),
+                "handle_encoder": lambda event: self.change_pp_duty(event, "high"),
             },
 
             # """
             # F2
             # """
             {
-                "text": [["Puls:", self.exp_str("pulse_freq")], self.freq_str(PULSE)],
+                "text": [["Puls:", self.exp_renderer("pulse_freq")], self.freq_str(PULSE)],
+                "handle_plusminus": self.exp_updater("pulse_freq"),
                 "handle_change": lambda event: self.change_pulse_freq(event),
             },
             {
-                "text": [["Duty:", self.exp_str("pulse_duty")], self.duty_str(PULSE)],
-                "handle_change": lambda event: self.change_pulse_duty(event),
+                "text": [["Duty:", self.exp_renderer("pulse_duty")], self.duty_str(PULSE)],
+                "handle_plusminus": self.exp_updater("pulse_duty"),
+                "handle_encoder": self.change_pulse_duty,
             },
             {
                 "text": [["Count:"], self.pulse_count],
-                "handle_change": lambda event: self.change_pulse_count(event),
+                "handle_encoder": self.change_pulse_count,
             },
             {
-                "text": [["Phase:", self.exp_str("pulse_phase")], self.phase_str],
-                "handle_change": lambda event: self.change_pulse_phase(event),
+                "text": [["Phase:", self.exp_renderer("pulse_phase")], self.phase_str],
+                "handle_plusminus": self.exp_updater("pulse_phase"),
+                "handle_encoder": self.change_pulse_phase,
             },
             {
                 "text": ["Period:", self.get_half()],
-                "handle_change": lambda event: self.change_half(event)
+                "handle_plusminus": self.change_half
             },
         ]
 
         super().__init__()
 
     def start(self):
-        clear_programs()
-        print("starting...")
         self.pwms[SYMMETRY] = PioPWM(
             PWMS[SYMMETRY]["sm"],
             mode=TRIGGER,
@@ -119,18 +103,17 @@ class Program(UIListProgram):
             in_pin=PWMS[PHASE]["pin"],
             mode=WITH_PIN,
         )
-        self.pwms[PULSE_INVERTED] = PioPWM(
-            PWMS[PULSE_INVERTED]["sm"],
-            pin=PWMS[PULSE_INVERTED]["pin"],
-            in_pin=PWMS[PULSE]["pin"],
-            mode=INVERTED_PIN,
-        ).sm.active(1)
+        self.load_settings()
+        super().start()
 
+    def load_settings(self):
         self.set_phase()
         self.load_params(SYMMETRY)
         self.load_params(PUSHPULL)
         self.load_params(PULSE)
-        super().start()
+
+    def run(self):
+        self.load_settings()
 
     """
     PushPull
@@ -138,9 +121,7 @@ class Program(UIListProgram):
 
     def change_pp_freq(self, event):
         exp_key = "symmetry_freq"
-        if (event in [UIListProgram.MINUS, UIListProgram.PLUS]):
-            self.update_exp(exp_key, event)
-        elif (event in [UIListProgram.INC, UIListProgram.DEC]):
+        if (event in [PWMSystem.INC, PWMSystem.DEC]):
             new_period = round(self.get_value_by_exp(
                 store.get_period(SYMMETRY),
                 self.dir_to_inc(event, True),
@@ -158,9 +139,7 @@ class Program(UIListProgram):
 
     def change_pp_symmetry(self, event):
         exp_key = "symmetry_duty"
-        if (event in [UIListProgram.MINUS, UIListProgram.PLUS]):
-            self.update_exp(exp_key, event)
-        elif (event in [UIListProgram.INC, UIListProgram.DEC]):
+        if (event in [PWMSystem.INC, PWMSystem.DEC]):
             self.update_duty(SYMMETRY, self.dir_to_inc(event), exp_key)
 
             self.load_params(SYMMETRY)
@@ -176,9 +155,7 @@ class Program(UIListProgram):
     def change_pp_duty(self, event, half):
         exp_key = half + "_duty"
 
-        if (event in [UIListProgram.PLUS, UIListProgram.MINUS]):
-            self.update_exp(exp_key, event)
-        elif (event in [UIListProgram.INC, UIListProgram.DEC]):
+        if (event in [PWMSystem.INC, PWMSystem.DEC]):
             symmetry = int(store.get_param(SYMMETRY, half))
             duty = round(self.get_value_by_exp(store.get_param(
                 PUSHPULL, half), self.dir_to_inc(event), exp_key))
@@ -204,17 +181,12 @@ class Program(UIListProgram):
         self.align_phase()
 
     def change_half(self, event):
-        if (event in [UIListProgram.PLUS, UIListProgram.MINUS]):
-            store.set_half((store.get_half() + 1) % 2)
-
+        store.set_half((store.get_half() + 1) % 2)
         self.set_phase()
 
     """
     Functions for display strings.
     """
-
-    def exp_str(self, exp_name):
-        return lambda: "x" + str(self.get_exp(exp_name) + 1)
 
     def freq_str(self, pwm):
         return lambda: freq_to_str(self.pwms[pwm].get_freq())
@@ -245,9 +217,9 @@ class Program(UIListProgram):
     def change_pulse_phase(self, event):
         exp_key = "pulse_phase"
 
-        if (event in [UIListProgram.MINUS, UIListProgram.PLUS]):
+        if (event in [PWMSystem.MINUS, PWMSystem.PLUS]):
             self.update_exp(exp_key, event)
-        elif (event in [UIListProgram.INC, UIListProgram.DEC]):
+        elif (event in [PWMSystem.INC, PWMSystem.DEC]):
             store.set_phase(
                 PULSE,
                 max(1, round(self.get_value_by_exp(
@@ -260,9 +232,9 @@ class Program(UIListProgram):
 
     def change_pulse_count(self, event):
         count = store.get_count(PULSE)
-        if (event == UIListProgram.INC):
+        if (event == PWMSystem.INC):
             store.set_count(PULSE, count + 1)
-        elif (event == UIListProgram.DEC):
+        elif (event == PWMSystem.DEC):
             store.set_count(PULSE, max(count - 1, 1))
 
         self.align_phase()
@@ -282,20 +254,16 @@ class Program(UIListProgram):
 
     def change_freq(self, event, pwm):
         exp_key = pwm + "_freq"
-        if (event in [UIListProgram.MINUS, UIListProgram.PLUS]):
-            self.update_exp(exp_key, event)
-        elif (event in [UIListProgram.INC, UIListProgram.DEC]):
+        if (event in [PWMSystem.INC, PWMSystem.DEC]):
             self.update_period(pwm, self.dir_to_inc(
                 event, invert=True), exp_key)
 
     def change_duty(self, pwm, event):
         exp_key = pwm + "_duty"
 
-        if (event == UIListProgram.TAP):
+        if (event == PWMSystem.TAP):
             self.switch_duty_mode(pwm)
-        elif (event in [UIListProgram.PLUS, UIListProgram.MINUS]):
-            self.update_exp(exp_key, event)
-        elif (event in [UIListProgram.INC, UIListProgram.DEC]):
+        elif (event in [PWMSystem.INC, PWMSystem.DEC]):
             self.update_duty(pwm, self.dir_to_inc(event), exp_key)
 
     def update_period(self, pwm, inc, exp_key):
@@ -338,6 +306,8 @@ class Program(UIListProgram):
 
     def load_params(self, pwm):
         self.pwms[pwm].set_params(store.get_params(pwm))
+        if (self.running):
+            self.pwms[pwm].active()
 
     def align_phase(self):
         pulse_period = store.get_period(PULSE)
@@ -353,41 +323,41 @@ class Program(UIListProgram):
 
         self.load_params(PHASE)
 
-    def get_value_by_exp(self, value, inc, exp_key, use_freq=False):
-        exp = self.get_exp(exp_key)
-        if (use_freq and exp in [1, 2, 3]):
-            mf = machine.freq()
-            return mf/self.get_value_by_exp(mf/value, inc * -1, exp_key)
-        if (exp == 3):
-            return value + inc * value * 0.5
-        if (exp == 2):
-            return value + inc * value * 0.1
-        if (exp == 1):
-            return value + inc * value * 0.01
+    # def get_value_by_exp(self, value, inc, exp_key, use_freq=False):
+    #     exp = self.get_exp(exp_key)
+    #     if (use_freq and exp in [1, 2, 3]):
+    #         mf = machine.freq()
+    #         return mf/self.get_value_by_exp(mf/value, inc * -1, exp_key)
+    #     if (exp == 3):
+    #         return value + inc * value * 0.5
+    #     if (exp == 2):
+    #         return value + inc * value * 0.1
+    #     if (exp == 1):
+    #         return value + inc * value * 0.01
 
-        return value + inc * 1
+    #     return value + inc * 1
 
-    def update_exp(self, exp_key, event):
-        exp = self.get_exp(exp_key)
-        if (event == UIListProgram.MINUS):
-            self.pwm_exp[exp_key] = (exp - 1) % self.max_exp
-        if (event == UIListProgram.PLUS):
-            self.pwm_exp[exp_key] = (exp + 1) % self.max_exp
+    # def update_exp(self, exp_key, event):
+    #     exp = self.get_exp(exp_key)
+    #     if (event == PWMSystem.MINUS):
+    #         self.pwm_exp[exp_key] = (exp - 1) % self.max_exp
+    #     if (event == PWMSystem.PLUS):
+    #         self.pwm_exp[exp_key] = (exp + 1) % self.max_exp
 
-        return self.pwm_exp[exp_key]
+    #     return self.pwm_exp[exp_key]
 
-    def get_exp(self, exp_key):
-        if (exp_key not in self.pwm_exp):
-            self.pwm_exp[exp_key] = 0
+    # def get_exp(self, exp_key):
+    #     if (exp_key not in self.pwm_exp):
+    #         self.pwm_exp[exp_key] = 0
 
-        return self.pwm_exp[exp_key]
+    #     return self.pwm_exp[exp_key]
 
-    def dir_to_inc(self, event, invert=False):
-        inc = 1
-        if (event == UIListProgram.DEC):
-            inc = -1
+    # def dir_to_inc(self, event, invert=False):
+    #     inc = 1
+    #     if (event == PWMSystem.DEC):
+    #         inc = -1
 
-        if (invert):
-            return inc * -1
+    #     if (invert):
+    #         return inc * -1
 
-        return inc
+    #     return inc
