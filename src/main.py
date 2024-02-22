@@ -8,6 +8,7 @@ def set_global_exception():
         import sys
         sys.print_exception(context["exception"])
         sys.exit()
+
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(handle_exception)
 
@@ -31,6 +32,8 @@ def start():
     except:
         print("Started new event loop")
         asyncio.new_event_loop()
+        asyncio.run(main())
 
 
-start()
+if __name__ == "__main__":
+    start()

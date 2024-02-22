@@ -1,6 +1,6 @@
 import machine
-from utils import noop_0, noop_1
-from ui_program import UIListProgram
+from lib.utils import noop_0, noop_1
+from lib.ui_program import UIListProgram
 
 
 class WithExp():
@@ -46,7 +46,6 @@ class WithExp():
 
 
 def default_render(value):
-    print("default render")
     return str(value)
 
 
@@ -94,6 +93,11 @@ class Field(WithExp):
             self.update_exp(e)
 
     def on_mode(self, e): pass
+
+# class TextField():
+#     allowedChars = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789"
+#     maxChars = 8
+#     value = ""
 
 
 class LabelField():

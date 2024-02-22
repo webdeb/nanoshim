@@ -5,15 +5,16 @@ from lib.autostart import add_to_autostartable
 class Menu(UIListProgram):
     def __init__(self, items, title=None):
         self.title = title or "Menu"
-        self.items = [self.create_program_item(p) for p in items]
+        self.items = [self.create_menu_item(p) for p in items]
 
         super().__init__()
 
-    def create_program_item(self, instance):
-        if (not isinstance(instance, UIListProgram)):
-            instance = instance(on_exit=self.start)
-        elif (isinstance(instance, Menu)):
+    def create_menu_item(self, instance):
+        if (isinstance(instance, Menu)):
             self.add_back_button_to_menu_instance(instance)
+        else:
+            instance = instance(on_exit=self.start)
+
         if (hasattr(instance, "title") and instance.autostartable):
             add_to_autostartable(instance.title, instance)
 

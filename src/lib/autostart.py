@@ -5,33 +5,16 @@ store = Store("/store/autostart.json", {
     "title": ""
 })
 
-autostart_program = None
-autostartable = []
+autostartables = {}
 
 
 def get_autostart_title():
-    title = store.get("title")
-    if (title is ""):
-        return "Menu"
-
-    return title
-
-
-def set_autostart_title(title):
-    store.set("title", title)
+    title = str(store.get("title"))
+    if (title in autostartables):
+        return title
+    return "Menu"
 
 
-def add_to_autostartable(title, instance):
-    autostartable.append(title)
-    if (get_autostart_title() == title):
-        autostart(instance)
-
-
-def autostart(p):
-    global autostart_program
-    autostart_program = p
-
-
-def get_autostart():
-    global autostart_program
-    return autostart_program
+def set_autostart_title(title): store.set("title", title)
+def add_to_autostartable(title, instance): autostartables[title] = instance
+def get_autostart(): return autostartables[get_autostart_title()]

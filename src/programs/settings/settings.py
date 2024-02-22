@@ -1,25 +1,22 @@
 import machine
 from lib.ui_program import UIListProgram
 from lib.store import Store
-from lib.autostart import autostartable, get_autostart_title, set_autostart_title
+from lib.autostart import autostartables, get_autostart_title, set_autostart_title
 
 VERSION = "v1.1.1"
 
 """
 Store
 """
-CONTRAST_PATH = "settings.contrast"
-MACHINE_FREQ_PATH = "settings.machine_freq"
-INIT_STRUCTURE = {
+store = Store(path="/store/settings_store.json", inital_data={
     "version": 3,
     "settings": {
         "contrast": 200,
         "machine_freq": 125_000_000,
     },
-}
-store = Store(path="/store/settings_store.json", inital_data=INIT_STRUCTURE)
+})
 def set_freq(freq): store.set("settings.machine_freq", freq)
-def get_freq(): store.get("settings.machine_freq")
+def get_freq(): return store.get("settings.machine_freq")
 
 
 class Settings(UIListProgram):
@@ -61,18 +58,21 @@ class Settings(UIListProgram):
         if (event not in [UIListProgram.INC, UIListProgram.DEC]):
             return
 
-        idx = 0
-        if (get_autostart_title() in autostartable):
-            idx = autostartable.index(get_autostart_title())
+        list_autostartables = list(autostartables)
 
-        count = len(autostartable)
+        idx = list_autostartables.index(get_autostart_title())
+        count = len(list_autostartables)
 
+        print(idx)
         if (event == UIListProgram.INC):
             idx = (idx + 1) % count
+            print("inc", idx)
         elif (event == UIListProgram.DEC):
             idx = (idx - 1) % count
+            print("dec", idx)
 
-        set_autostart_title(autostartable[idx])
+        print(idx)
+        set_autostart_title(list_autostartables[idx])
 
     def get_contrast(self):
         return str(self.display.get_contrast())
@@ -93,7 +93,3 @@ class Settings(UIListProgram):
         elif (event == UIListProgram.DEC):
             contrast -= 10
         self.display.set_contrast(contrast)
-
-    def load_settings():
-        machine.freq(get_freq())
-        display.set_contrast(get_contrast())

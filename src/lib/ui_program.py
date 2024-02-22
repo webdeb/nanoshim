@@ -34,7 +34,7 @@ class UIListProgram:
 
     def get_items_text(self):
         items = self.get_items()
-        return list(map(lambda i: i["text"], items))
+        return [i["text"] for i in items]
 
     def start(self):
         Buttons, Encoder = get_inputs()
@@ -47,6 +47,7 @@ class UIListProgram:
         Buttons.on(SW4, self.on_sw4)
         Buttons.on(SW5, self.on_sw5)
         Buttons.on_long(SW4, lambda: self.handle_encoder(UIListProgram.TAP))
+
         Encoder.set_handler(self.encoder_handler)
 
         self.render()
@@ -58,7 +59,10 @@ class UIListProgram:
 
     def render(self):
         self.display.render_menu(
-            self.title, self.get_items_text(), self.selected_item)
+            self.title,
+            self.get_items_text(),
+            self.selected_item
+        )
 
     def on_sw1(self):
         items = self.get_items()

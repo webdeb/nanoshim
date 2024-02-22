@@ -1,28 +1,32 @@
 import machine
 
 
+def is_int(n):
+    return isinstance(n, int)
+
+
 def freq_to_str(freq):
     if (freq < 1000):
-        return f"{round(freq, 2)}Hz"
+        return "{:.3f}Hz".format(freq, 3)
     elif (freq < 1_000_000):
-        return f"{round(freq / 1_000, 2)}k"
+        return "{:.3f}k".format(freq / 1_000, 3)
     else:
-        return f"{round(freq / 1_000_000, 2)}M"
+        return "{:.3f}M".format(freq / 1_000_000, 3)
 
 
 def ns_to_str(ns):
     if (ns < 1e3):
-        return f"{round(ns, 1)}ns"
+        return "{:.1f}ns".format(ns)
     elif (ns < 1e6):
-        return f"{round(ns / 1e3, 2)}us"
+        return "{:.3f}us".format(ns / 1e3)
     elif (ns < 1e9):
-        return f"{round(ns / 1e6, 2)}ms"
+        return "{:.3f}ms".format(ns / 1e6)
     else:
-        return f"{round(ns / 1e9, 2)}s"
+        return "{:.3f}s".format(ns / 1e9)
 
 
 def percent_str(value):
-    return f"{round(value * 100, 2)}%"
+    return "{:.2f}%".format(value * 100)
 
 
 def ticks_to(value, s=1e-9):

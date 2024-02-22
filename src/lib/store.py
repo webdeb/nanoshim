@@ -74,8 +74,8 @@ class Store:
                     obj = obj[part]
             return obj
         except:
-            print(path, "Error")
-            return 0
+            print(path, "Error", self.data)
+            raise KeyError("Smth went very bad...")
 
     def load(self):
         self.is_loading = True
@@ -111,13 +111,18 @@ class ChildStore():
         self.key = str(key)
         self.initial_data = initial_data
 
-    def set_parent_store(self, store: Store):
+    def set_parent(self, store: Store):
         self.parent_store = store
         if (self.initial_data.get("version") != self.get("version")):
             self.parent_store.set(self.key, self.initial_data)
 
     def get(self, key):
+        if (self.parent_store is None):
+            return self.initial_data[key]
+
         return self.parent_store.get(f"{self.key}.{key}")
 
     def set(self, key, value):
+        if (self.parent_store is None):
+            raise LookupError("Parent store not defined")
         return self.parent_store.set(f"{self.key}.{key}", value)

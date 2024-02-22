@@ -1,22 +1,14 @@
 from lib.ui_program import UIListProgram
 from lib.store import Store, ChildStore
-from .programs import BasePIOControl
 from misc.rgbled import Led
 
 
 def first_fit_pio(instructions_per_sm):
-    print(instructions_per_sm)
-
     free_instructions = [32, 32]
-    sorted_sm = sorted(instructions_per_sm,
-                       key=lambda sm: sm[1],
-                       reverse=True
-                       )
-
-    total = len(sorted_sm) - 1  # just adjust here for comparison.
+    sorted_sm = sorted(instructions_per_sm, key=lambda sm: sm[1], reverse=True)
     for (pio_idx, free) in enumerate(free_instructions):
         free_slots = 4
-        for (sm_idx, next_large) in enumerate(sorted_sm):
+        for next_large in sorted_sm:
             if (free >= next_large[1] and len(next_large) == 2):
                 sm_id = abs(free_slots - 4) + (pio_idx * 4)
                 next_large.append(sm_id)
@@ -36,11 +28,14 @@ class PWMSystem(UIListProgram):
     programs = []
 
     # store
-    version = 3
+    version = 4
 
-    def __init__(self, title, programs: list[BasePIOControl]):
+    def __init__(self, title, programs):
         self.title = title
-        self.programs = programs  # get text items
+        self.programs = programs
+
+    def set_exit(self, on_exit):
+        self.on_exit = on_exit
 
     def get_items(self):
         items = []
@@ -51,18 +46,29 @@ class PWMSystem(UIListProgram):
     def start(self):
         instructions = []
         programs_store = []
-        version = 0
+        version = self.version
 
+        # 1. loop load programs data
         for idx, program in enumerate(self.programs):
-            program.setup_store(ChildStore(
-                self.store, f"programs.{idx}", program.store_structure))
+            program_store = ChildStore(
+                f"programs.{idx}",
+                program.get_store_structure()
+            )
+            programs_store.append(program_store)
             instructions.append([idx, program.instructions])
+            version += int(program_store.initial_data.get("version"))
 
-        self.store = Store(f"/store/{self.title}.json", {"version": self.version,
-                           "programs": [dict(p.store_structure, **p.extend_store_structure) for p in self.programs]})
+        self.store = Store(f"/store/{self.title}.json", {
+            "version": version,
+            "programs": [p.initial_data for p in programs_store]
+        })
 
         programs_sm = first_fit_pio(instructions)
+
+        # setup machines
         for idx, program in enumerate(self.programs):
+            program.setup_store(programs_store[idx])
+            program.store.set_parent(self.store)
             program.setup_machine(programs_sm[idx][2])
 
         super().start()
