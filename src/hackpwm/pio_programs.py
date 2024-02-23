@@ -1,34 +1,6 @@
 from rp2 import asm_pio, PIO
 from lib.utils import is_int
 
-
-def create_pwm_program(wait_gpio=None, wait_polarity=1):
-    @asm_pio(sideset_init=PIO.OUT_LOW)
-    def program():
-        label("load")
-        pull()
-        out(isr, 32)
-        pull()
-
-        wrap_target()
-
-        mov(y, isr)                      # x
-        jmp(not_y, "load")               # x
-        mov(x, osr)                      # x
-
-        if (wait_gpio):
-            wait(wait_polarity, gpio, wait_gpio)
-
-        label("high")
-        jmp(y_dec, "high")  .side(1)     # y
-        label("low")
-        jmp(x_dec, "low")   .side(0)     # x
-
-        wrap()
-
-    return program
-
-
 """
 [array('H', [32928, 24768, 32928, 41030, 96, 40999, 6278, 4167]), -1, -1, 1073770880, 0, None, None, 2]
 [array('H', [32928, 24768, 32928, 8332, 41030, 96, 40999, 6279, 4168]), -1, -1, 1073774976, 0, None, None, 2]
@@ -61,27 +33,27 @@ def trigger_45():
     wrap()
 
 
-# 10 Instructions
-@asm_pio(sideset_init=PIO.OUT_LOW)
-def pwm_with_pin_program_inverted():
-    label("load")
-    pull()
-    out(isr, 32)
-    pull()
+# # 10 Instructions
+# @asm_pio(sideset_init=PIO.OUT_LOW)
+# def pwm_with_pin_program_inverted():
+#     label("load")
+#     pull()
+#     out(isr, 32)
+#     pull()
 
-    wrap_target()
+#     wrap_target()
 
-    mov(y, isr)         .side(0)     # l
-    jmp(not_y, "load")               # l (dont care about "load" delay)
-    mov(x, osr)                      # l
+#     mov(y, isr)         .side(0)     # l
+#     jmp(not_y, "load")               # l (dont care about "load" delay)
+#     mov(x, osr)                      # l
 
-    wait(1, pin, 0)                  # l
-    label("low")
-    jmp(y_dec, "low")                # l + x
-    label("high")
-    jmp(x_dec, "high")  .side(1)     # h + y
-    nop()[3]     # 4xh
-    wrap()
+#     wait(1, pin, 0)                  # l
+#     label("low")
+#     jmp(y_dec, "low")                # l + x
+#     label("high")
+#     jmp(x_dec, "high")  .side(1)     # h + y
+#     nop()[3]     # 4xh
+#     wrap()
 
 
 # 10 Instructions
@@ -116,35 +88,6 @@ def pwm_with_pin_program_inverted_once():
 
 
 # 16 Instructions
-@asm_pio(sideset_init=(PIO.OUT_LOW, PIO.OUT_LOW))
-def pushpull_program():
-    label("load")
-    pull()
-    out(isr, 32)
-    pull()
-
-    wrap_target()
-
-    mov(y, isr)                       # l
-    jmp(not_y, "load")                # l
-    mov(x, osr)[1]  # 2xl
-
-    label("high")
-    jmp(y_dec, "high")    .side(0b01)  # h
-    label("low")
-    jmp(x_dec, "low")     .side(0)    # l + x
-
-    # other shoulder..
-    mov(y, isr)                       # l
-    jmp(not_y, "load")                # l
-    mov(x, osr)[1]  # 2xl
-
-    label("high_2")
-    jmp(y_dec, "high_2")  .side(0b10)  # h
-    label("low_2")
-    jmp(x_dec, "low_2")   .side(0)    # l + x
-
-    wrap()
 
 # 12
 

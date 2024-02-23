@@ -1,3 +1,11 @@
+from lib.ui_program import UIListProgram
+
+
+class PWMSystemBuilder(UIListProgram):
+    def __init__(self, on_exit=None):
+        super().__init__(on_exit)
+
+
 """
 Idea is to allow creation of PWM Programs through the MC UI.
 """

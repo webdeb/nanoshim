@@ -101,12 +101,13 @@ class Field(WithExp):
 
 
 class LabelField():
-    def __init__(self, label, on_mode=noop_1):
+    def __init__(self, label, on_mode=noop_1, get_addition=lambda: ""):
         self.label = label
         self.on_mode = on_mode
+        self.get_addition = get_addition
 
     def item(self):
         return {
-            "text": self.label,
+            "text": [[self.label], self.get_addition],
             "handle_encoder": self.on_mode
         }

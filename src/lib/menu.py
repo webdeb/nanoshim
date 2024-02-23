@@ -3,7 +3,7 @@ from lib.autostart import add_to_autostartable
 
 
 class Menu(UIListProgram):
-    def __init__(self, items, title=None):
+    def __init__(self, title=None, items=[]):
         self.title = title or "Menu"
         self.items = [self.create_menu_item(p) for p in items]
 

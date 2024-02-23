@@ -1,8 +1,6 @@
 from rp2 import StateMachine, PIO, asm_pio
-from hackpwm.pio_programs import create_pwm_program
 from lib.utils import percent_str, ticks_to_time_str, ticks_to_freq_str, is_int
 from lib.fields import Field, LabelField
-from struct import pack
 
 
 class PIOWrapper:
@@ -26,14 +24,20 @@ class PIOWrapper:
         if (len(missing_required) > 0):
             raise AttributeError(f"Missing attributes: {
                                  ', '.join(missing_required)}")
-        if (callable(self.create_program)):
-            self.program = self.create_program()
 
-        if (self.program == None):
+        if (self.program is None):
             raise AttributeError(f"Missing PIO program")
 
         self.id = id
         self.sm = StateMachine(self.id, prog=self.program, **kwargs)
+
+    def __init__(self):
+        if (callable(self.create_program)):
+            program, instructions, X, Y = tuple(self.create_program())
+            self.instructions = instructions
+            self.program = program
+            self.X = X
+            self.Y = Y
 
     def x(self, x=None):
         if self.X is None:
@@ -98,6 +102,7 @@ class BasePIOControl(PIOWrapper):
     label_y = "Y"
     fields = None
     wait_pin = None
+    wait_level = 1
     count_pin = None
     pin = None
 
@@ -113,12 +118,13 @@ class BasePIOControl(PIOWrapper):
         return dict(self.store_structure, **self.additional_store_items)
 
     # Creation of the StateMachine inside a PWMSystem
-    def __init__(self, label=None, pin=None, in_pin=None, wait_pin=None, count_pin=None):
+    def __init__(self, label=None, pin=None, wait_pin=None, count_pin=None, wait_level=1):
         self.label = label
-        self.in_pin = in_pin
         self.count_pin = count_pin
         self.wait_pin = wait_pin
+        self.wait_level = wait_level
         self.pin = pin
+        super().__init__()
 
     def run(self):
         self.active(1)
@@ -180,19 +186,48 @@ PWM Program
 """
 
 
+def create_pwm_program(wait_pin=None, wait_level=1):
+    @asm_pio(sideset_init=PIO.OUT_LOW)
+    def program():
+        label("load")
+        pull()
+        out(isr, 32)
+        pull()
+
+        wrap_target()
+
+        mov(y, isr)                      # x
+        jmp(not_y, "load")               # x
+        mov(x, osr)                      # x
+
+        if isinstance(wait_pin, int):
+            wait(wait_level, gpio, wait_pin)
+
+        label("high")
+        jmp(y_dec, "high")  .side(1)     # y
+        label("low")
+        jmp(x_dec, "low")   .side(0)     # x
+
+        wrap()
+
+    X = 5 if is_int(wait_pin) else 4
+    return program, len(program[0]), X, 1
+
+
 class PWM(BasePIOControl):
-    instructions = 8
+    id = "PWM"
     label_period = "F"
     label_duty = "D"
-    X = 4
-    Y = 1
-    fields = None
     wait_pin = None
 
     additional_store_items = {
         "version": 1,
         "duty_percent": None,
     }
+
+    def create_program(self):
+        return create_pwm_program(
+            wait_pin=self.wait_pin, wait_level=self.wait_level)
 
     def get_duty(self): return self.y()
 
@@ -201,11 +236,11 @@ class PWM(BasePIOControl):
 
     def get_duty_percent(self): return self.store.get("duty_percent")
 
-    def create_program(self):
-        return create_pwm_program(wait_gpio=self.wait_pin)
-
     def get_machine_args(self):
         return {"sideset_base": self.pin}
+
+    def render_period(self, value):
+        return ticks_to_freq_str(value)
 
     def create_fields(self):
         fields = []
@@ -216,7 +251,7 @@ class PWM(BasePIOControl):
             Field(
                 self.label_period,
                 get_value=self.get_period,
-                render_value=ticks_to_freq_str,
+                render_value=self.render_period,
                 on_change=self.on_change_period,
                 with_exp=True,
                 is_freq=True
@@ -250,7 +285,7 @@ class PWM(BasePIOControl):
 
     def on_change_duty(self, value):
         period = self.get_period()
-        y = self.y(min(value, period))
+        y = self.y(min(value, period - self.X))
         if (self.is_duty_percent()):
             self.store.set("duty_percent", y / period)
         self.x(period - y)
@@ -267,121 +302,11 @@ class PWM(BasePIOControl):
 
 
 """
-PWM_WITH_PIN("Puls", pin=OUT2, in_pin=OUT1)
+PUSH PULL Program
 """
 
 
-class PWM_WITH_PIN(PWM):
-    @asm_pio(sideset_init=PIO.OUT_LOW)
-    def program():
-        label("load")
-        pull()
-        out(isr, 32)
-        pull()
-
-        wrap_target()
-        mov(y, isr)                      # x
-        jmp(not_y, "load")               # x
-        mov(x, osr)                      # x
-
-        wait(1, pin, 0)                  # x
-        label("high")
-        jmp(y_dec, "high")  .side(1)     # y
-
-        label("low")
-        jmp(x_dec, "low")   .side(0)     # x
-
-        wrap()
-
-    instructions = 9
-    X = 5
-    Y = 1
-
-    def get_machine_args(self):
-        return {"sideset_base": self.pin, "in_base": self.in_pin}
-
-
-"""
-TRIGGER_45
-"""
-
-
-class TRIGGER_45(PWM):
-    @asm_pio()
-    def program():
-        label("load")
-        pull()
-        out(isr, 32)
-        pull()
-
-        wrap_target()
-
-        mov(y, isr)                      # x
-        jmp(not_y, "load")               # x
-        mov(x, osr)                      # x
-
-        irq(clear, 5)                    # x
-        irq(4)                           # y
-        label("high")
-        jmp(y_dec, "high")               # y
-
-        irq(clear, 4)                    # y
-        irq(5)                           # x
-        label("low")
-        jmp(x_dec, "low")                # x
-
-        wrap()
-
-    instructions = 12
-    X = 6
-    Y = 3
-    label_duty = "Sym"
-
-    # just rewrite some to always use %
-    def switch_duty_mode(self, e): pass
-    def is_duty_percent(self): return True
-
-
-"""
-TRIGGER_45_WITH_PIN
-"""
-
-
-class TRIGGER_45_WITH_PIN(TRIGGER_45):
-    @asm_pio()
-    def program():
-        label("load")
-        pull()
-        out(isr, 32)
-        pull()
-
-        wrap_target()
-
-        wait(1, pin, 0)                  # x
-        mov(y, isr)                      # x
-        jmp(not_y, "load")               # x
-        mov(x, osr)                      # x
-
-        irq(clear, 5)                    # x
-        irq(4)                           # y
-        label("high")
-        jmp(y_dec, "high")               # y
-
-        irq(clear, 4)                    # y
-        irq(5)                           # x
-        label("low")
-        jmp(x_dec, "low")                # x
-
-        wrap()
-
-    def get_machine_args(self):
-        return {"in_base": self.in_pin}
-
-    instructions = 13
-    X = 7
-
-
-class PUSH_PULL_45(BasePIOControl):
+def create_push_pull_program(wait_pin=None, wait_level=1):
     @asm_pio(sideset_init=(PIO.OUT_LOW, PIO.OUT_LOW))
     def program():
         label("load")
@@ -391,139 +316,116 @@ class PUSH_PULL_45(BasePIOControl):
 
         wrap_target()
 
-        mov(y, isr)                 .side(0b00)        #
-        jmp(not_y, "load")          .side(0b00)        #
-        wait(1, irq, 4)             .side(0b00)        #
+        mov(y, isr)                             # l
+        jmp(not_y, "load")                      # l
+        mov(x, osr)                             # l
+        if isinstance(wait_pin, int):
+            wait(wait_level, gpio, wait_pin)    # l
         label("high_1")
-        jmp(y_dec, "high_1")        .side(0b01)        # x
-        mov(x, osr)                 .side(0b00)        #
-        wait(1, irq, 5)             .side(0b00)        #
+        jmp(y_dec, "high_1")    .side(0b01)     # h
+        label("low_1")
+        jmp(x_dec, "low_1")     .side(0)        # l + x
+
+        # other shoulder..
+        mov(y, isr)                             # l
+        jmp(not_y, "load")                      # l
+        mov(x, osr)[int(wait_pin is not None)]           # l
         label("high_2")
-        jmp(x_dec, "high_2")        .side(0b10)        # y
+        jmp(y_dec, "high_2")  .side(0b10)       # h
+        label("low_2")
+        jmp(x_dec, "low_2")   .side(0)          # l + x
 
         wrap()
 
-    instructions = 10
-    X = 1
-    Y = 1
-    label_x = "D1"
-    label_y = "D2"
+    X = 5 if is_int(wait_pin) else 4
+    return program, len(program[0]), X, 1
+
+
+class PUSH_PULL(PWM):
+    id = "PUSH_PULL"
+
+    def render_period(self, value):
+        return ticks_to_freq_str(value * 2)
+
+    def create_program(self):
+        return create_push_pull_program(
+            wait_pin=self.wait_pin,
+            wait_level=self.wait_level
+        )
+
+
+"""
+PHASE PULSE
+"""
+
+
+def create_phase_pulse_program(wait_pin=None, wait_level=None, count_pin=None):
+    @asm_pio(sideset_init=PIO.OUT_LOW)
+    def program():
+        label("load")
+        pull()
+        out(isr, 32)
+        pull()
+
+        wrap_target()
+        label("wrap")
+        mov(y, isr)         .side(0)     # x
+        jmp(not_y, "load")               # x
+        set(y, (y - 1))
+        mov(x, osr)                      # x
+        wait(int(not wait_level), gpio, wait_pin)
+        wait(wait_level, gpio, wait_pin)                  # x
+
+        label("wait")
+        jmp(x_dec, "wait")               # x
+
+        label("run")
+        if (isinstance(count_pin, int)):
+            wait(1, gpio, count_pin)     .side(1)
+            wait(0, gpio, count_pin)
+            jmp(not_y, "wrap")
+        jmp(y_dec, "run")                .side(1)  # y
+
+        wrap()
+
+    return program, len(program[0]), 6, 1
+
+
+class PHASE_PULSE(BasePIOControl):
+    id = "PHASE_PULSE"
+    label_phase = "Phs"
+    label_count = "Count"
+    label_duty = "D"
+
+    def create_program(self):
+        return create_phase_pulse_program(
+            wait_pin=self.wait_pin,
+            wait_level=self.wait_level,
+            count_pin=self.count_pin
+        )
 
     def get_machine_args(self):
         return {"sideset_base": self.pin}
 
     def create_fields(self):
-        return [
-            Field(self.label_x, get_value=self.x, with_exp=True,
-                  on_change=self.on_change_x, render_value=ticks_to_time_str),
-            Field(self.label_y, get_value=self.y, with_exp=True,
-                  on_change=self.on_change_y, render_value=ticks_to_time_str),
-        ]
+        fields = []
+        if (self.label):
+            fields.append(LabelField(self.label))
 
-    # Nice to have
-    # need to provide context information.
-    # could potentially lead to a circular dependency
-    # Maybe simpler to use one class, but dependency would still be there..
-    # additional_store_items = {
-    #     "duty_percent_x": None,
-    #     "duty_percent_y": None
-    # }
-    # def set_context(self, program: TRIGGER_45):
-    #     self.context = program
-    # def get_context_period(self):
-    #     return self.context.get_period()
-    # def on_context_change(self):
-    #     duty_percent_x = self.get_duty_percent("x")
-    #     duty_percent_y = self.get_duty_percent("y")
-    #     if (duty_percent_x is not None):
-    #         self.x(round(duty_percent_x * ))
+        fields.append(Field(self.label_phase, get_value=self.x, with_exp=True,
+                      on_change=self.on_change_x, render_value=ticks_to_time_str))
 
-    # def get_duty_percent(self, k):
-    #     return self.store.get(f"duty_percent_{k}")
+        if (is_int(self.count_pin)):
+            duty_field = Field(
+                self.label_count, get_value=self.y,
+                with_exp=True, on_change=self.on_change_y)
+        else:
+            duty_field = Field(
+                self.label_duty, get_value=self.y, render_value=ticks_to_time_str,
+                with_exp=True, on_change=self.on_change_y)
 
-class ONCE_AFTER():
-    
-
-class COUNT_AFTER(BasePIOControl):
-    instructions = 11
-    label_phase = "Phs"
-    label_count = "Count"
-    X = 5
-    Y = 1
-
-    # def y(self, value=None):
-    #     if (value is not None and value <= 0 and self.running):
-    #         self.sm.active(0)
-
-    #     if (self.sm.active() == 0 and self.running):
-    #         self.sm.active(1)
-    #     super().y(value)
-
-    def get_machine_args(self):
-        return {"sideset_base": self.pin, "in_base": self.in_pin}
-
-    def create_program(self):
-        return
-
-    def create_fields(self):
-        return [
-            LabelField(self.label),
-            Field(self.label_phase, get_value=self.x, with_exp=True,
-                  on_change=self.on_change_x, render_value=ticks_to_time_str),
-            Field(self.label_count, get_value=self.y, with_exp=True,
-                  on_change=self.on_change_y),
-        ]
+        fields.append(duty_field)
+        return fields
 
 
-def create_count_after_program(count_pin, wait_pin, wait_level=1):
-    @asm_pio(sideset_init=PIO.OUT_LOW)
-    def program():
-        label("load")
-        pull()
-        out(isr, 32)
-        pull()
-
-        wrap_target()
-
-        mov(y, isr)         .side(0)     # x
-        jmp(not_y, "load")               # x
-        mov(x, osr)                      # x
-
-        wait(wait_level, gpio, wait_pin)                  # x
-        label("wait")
-        jmp(x_dec, "wait")               # x
-
-        label("count")
-        wait(1, gpio, count_pin)     .side(1)     #
-        wait(0, gpio, count_pin)
-        jmp(y_dec, "count")               # y
-
-        wrap()
-
-    return program
-
-
-class COUNT_AFTER_5(COUNT_AFTER_4):
-    @asm_pio(sideset_init=PIO.OUT_LOW)
-    def program():
-        label("load")
-        pull()
-        out(isr, 32)
-        pull()
-
-        wrap_target()
-
-        mov(y, isr)         .side(0)     # x
-        jmp(not_y, "load")               # x
-        mov(x, osr)                      # x
-
-        wait(1, irq, 5)
-        label("low")
-        jmp(x_dec, "low")                # x
-
-        label("count")
-        wait(1, pin, 0)     .side(1)
-        wait(0, pin, 0)
-        jmp(y_dec, "count")       # y
-
-        wrap()
+ALL_PROGRAMS = [PWM, PUSH_PULL, PHASE_PULSE]

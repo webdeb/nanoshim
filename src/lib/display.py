@@ -31,6 +31,7 @@ class Display:
     def render_menu(self, title, items, active_idx=0, exp=None):
         menubuf = framebuf.FrameBuffer(
             bytearray(1024), 128, 64, framebuf.MONO_HLSB)
+
         menubuf.text(title, 0, 0, 1)
         menubuf.hline(0, 12, 128, 1)
         start = max(0, active_idx - 2)

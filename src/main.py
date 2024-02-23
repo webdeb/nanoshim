@@ -32,7 +32,6 @@ def start():
     except:
         print("Started new event loop")
         asyncio.new_event_loop()
-        asyncio.run(main())
 
 
 if __name__ == "__main__":

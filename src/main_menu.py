@@ -3,7 +3,7 @@ from lib.menu import Menu
 from lib.autostart import get_autostart, add_to_autostartable
 
 # PWM Programms
-from programs.pwm.puls_pack import Program as P5
+from programs.pwm.load_stored import load_systems
 # Utils
 from programs.utilities.lc import Program as RLCCalculator
 # Settings
@@ -13,23 +13,15 @@ from programs.settings import Settings
 async def create_main_menu():
     custom = import_custom()
     main_menu_items = [
-        Menu([
-
-            # PPPP,
-            P5,
-            # TwoFAM,
-            # SixMix,
-        ], "PWM Programms"),
-        Menu([
-            RLCCalculator,
-        ], "Utils"),
+        Menu(title="PWM Programms", items=load_systems()),
+        Menu(title="Utils", items=[RLCCalculator]),
         Settings,
     ]
 
     if (custom):
         main_menu_items.insert(1, custom)
 
-    main_menu = Menu(main_menu_items)
+    main_menu = Menu(items=main_menu_items)
     add_to_autostartable("Menu", main_menu)
     autostart_program = get_autostart()
     if (autostart_program):

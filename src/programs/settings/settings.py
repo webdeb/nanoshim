@@ -63,15 +63,10 @@ class Settings(UIListProgram):
         idx = list_autostartables.index(get_autostart_title())
         count = len(list_autostartables)
 
-        print(idx)
         if (event == UIListProgram.INC):
             idx = (idx + 1) % count
-            print("inc", idx)
         elif (event == UIListProgram.DEC):
             idx = (idx - 1) % count
-            print("dec", idx)
-
-        print(idx)
         set_autostart_title(list_autostartables[idx])
 
     def get_contrast(self):

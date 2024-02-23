@@ -28,7 +28,6 @@ class Levels:
         while True:
             for level in self.levels:
                 if self.is_level(self.adc.read_u16(), level):
-                    # print("level", level)
                     start = time.ticks_ms()
                     long_press = False
                     press_duration = 0
@@ -44,16 +43,13 @@ class Levels:
                         press_duration = time.ticks_ms() - start
                         if (press_duration > 1000):
                             long_press = True
-                            # print("long press", level)
                             break
 
                         await asyncio.sleep_ms(1)
 
                     if (long_press):
-                        print("long press")
                         asyncio.create_task(self._long_cb(level))
                     elif (press_duration > 10):
-                        # print("normal press")
                         asyncio.create_task(self._cb(level))
 
                     await self.wait_release(level)
@@ -70,7 +66,6 @@ class Levels:
                 break
             await asyncio.sleep_ms(1)
 
-        # print("released", adc_level, level, is_level)
         return True
 
     async def _long_cb(self, level):
