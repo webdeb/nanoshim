@@ -37,8 +37,9 @@ def ticks_to_time_str(value):
     return ns_to_str(ticks_to(value))
 
 
-def ticks_to_freq_str(value):
-    return freq_to_str(machine.freq()/value)
+def ticks_to_freq_str(value, mf=None):
+    mf = machine.freq() if mf is None else mf
+    return freq_to_str(mf/value)
 
 
 def noop_0(): pass

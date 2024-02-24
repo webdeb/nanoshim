@@ -105,24 +105,20 @@ class Store:
 
 
 class ChildStore():
-    parent_store = None
+    parent_store: Store
 
-    def __init__(self, key, initial_data):
+    def __init__(self, key, initial_data, check_key):
         self.key = str(key)
+        self.check_key = check_key
         self.initial_data = initial_data
 
     def set_parent(self, store: Store):
         self.parent_store = store
-        if (self.initial_data.get("version") != self.get("version")):
+        if (self.initial_data.get(self.check_key) != self.get(self.check_key)):
             self.parent_store.set(self.key, self.initial_data)
 
     def get(self, key):
-        if (self.parent_store is None):
-            return self.initial_data[key]
-
         return self.parent_store.get(f"{self.key}.{key}")
 
     def set(self, key, value):
-        if (self.parent_store is None):
-            raise LookupError("Parent store not defined")
         return self.parent_store.set(f"{self.key}.{key}", value)

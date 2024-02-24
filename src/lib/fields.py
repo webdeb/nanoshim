@@ -94,20 +94,14 @@ class Field(WithExp):
 
     def on_mode(self, e): pass
 
-# class TextField():
-#     allowedChars = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789"
-#     maxChars = 8
-#     value = ""
-
-
 class LabelField():
-    def __init__(self, label, on_mode=noop_1, get_addition=lambda: ""):
+    def __init__(self, label, on_mode=noop_0, get_addition=lambda: ""):
         self.label = label
         self.on_mode = on_mode
         self.get_addition = get_addition
 
     def item(self):
         return {
-            "text": [[self.label], self.get_addition],
-            "handle_encoder": self.on_mode
+            "text": [self.label, self.get_addition],
+            f"handle_{UIListProgram.TAP}": self.on_mode
         }

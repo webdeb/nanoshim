@@ -6,5 +6,7 @@ from lib.constants import (
     OUT5,
     OUT6,
 
-
+    PIN_GP02,
+    PIN_GP02,
+    PIN_GP04,
 )

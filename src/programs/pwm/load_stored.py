@@ -5,7 +5,7 @@ from hackpwm.programs import ALL_PROGRAMS
 
 def load_systems():
     systems = []
-    for (k, s) in dict(store.get('systems')).items():
+    for s in store.get('systems'):
         label = s.get("title")
         system = PWMSystem(
             title=label,
@@ -17,11 +17,10 @@ def load_systems():
 
 
 def create_program(p):
-    id = p.pop("pid")
-    ProgramClass = next(filter(lambda p: p.id == id, ALL_PROGRAMS))
+    pid = p.get("pid")
+    ProgramClass = next(filter(lambda p: p.pid == pid, ALL_PROGRAMS))
 
     return ProgramClass(**p)
-
 
 # class PWMSystemLoader():
 #     title = None

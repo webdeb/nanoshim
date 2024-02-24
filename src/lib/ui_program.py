@@ -93,7 +93,10 @@ class UIListProgram:
 
     def handle_encoder(self, event):
         items = self.get_items()
-        if ("handle_encoder" in items[self.selected_item]):
+        if (f"handle_{event}" in items[self.selected_item]):
+            items[self.selected_item][f"handle_{event}"]()
+            self.render()
+        elif ("handle_encoder" in items[self.selected_item]):
             items[self.selected_item]["handle_encoder"](event)
             self.render()
         else:

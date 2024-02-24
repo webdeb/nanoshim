@@ -44,6 +44,10 @@ class PWMSystem(UIListProgram):
         return items
 
     def start(self):
+        self.load()
+        super().start()
+
+    def load(self):
         instructions = []
         programs_store = []
         version = self.version
@@ -52,7 +56,8 @@ class PWMSystem(UIListProgram):
         for idx, program in enumerate(self.programs):
             program_store = ChildStore(
                 f"programs.{idx}",
-                program.get_store_structure()
+                program.get_store_structure(),
+                check_key="pid"
             )
             programs_store.append(program_store)
             instructions.append([idx, program.instructions])
@@ -71,7 +76,9 @@ class PWMSystem(UIListProgram):
             program.store.set_parent(self.store)
             program.setup_machine(programs_sm[idx][2])
 
-        super().start()
+    def reload(self):
+        self.stop_and_remove()
+        self.load()
 
     def handle_button(self):
         self.stop_and_remove()  # -> stop and remove programs

@@ -1,11 +1,6 @@
 from rp2 import asm_pio, PIO
 from lib.utils import is_int
 
-"""
-[array('H', [32928, 24768, 32928, 41030, 96, 40999, 6278, 4167]), -1, -1, 1073770880, 0, None, None, 2]
-[array('H', [32928, 24768, 32928, 8332, 41030, 96, 40999, 6279, 4168]), -1, -1, 1073774976, 0, None, None, 2]
-"""
-
 
 @asm_pio()
 def trigger_45():
@@ -55,12 +50,10 @@ def trigger_45():
 #     nop()[3]     # 4xh
 #     wrap()
 
-
-# 10 Instructions
-@asm_pio(sideset_init=PIO.OUT_HIGH)
+@asm_pio(sideset_init=PIO.OUT_LOW)
 def inverted_pin():
-    wait(1, pin, 0)     .side(1)
     wait(0, pin, 0)     .side(0)
+    wait(1, pin, 0)     .side(1)
 
 # 10 Instructions
 

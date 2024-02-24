@@ -2,19 +2,16 @@ import os
 from lib.menu import Menu
 from lib.autostart import get_autostart, add_to_autostartable
 
-# PWM Programms
 from programs.pwm.load_stored import load_systems
-# Utils
 from programs.utilities.lc import Program as RLCCalculator
-# Settings
+from programs.utilities.freq_calculator import FreqCalculator
 from programs.settings import Settings
-
 
 async def create_main_menu():
     custom = import_custom()
     main_menu_items = [
-        Menu(title="PWM Programms", items=load_systems()),
-        Menu(title="Utils", items=[RLCCalculator]),
+        Menu(title="PWM Systems", items=load_systems()),
+        Menu(title="Utils", items=[RLCCalculator, FreqCalculator]),
         Settings,
     ]
 
