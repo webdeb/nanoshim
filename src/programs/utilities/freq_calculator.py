@@ -13,10 +13,10 @@ class FreqCalculator(UIListProgram):
 
   def __init__(self, on_exit=None):
     self.items = [
-      Field("F:", get_value=lambda: self.x, on_change=self.set_x, render_value=self.render_x, with_exp=True).item(),
-      LabelField("MF:", get_addition=self.get_calculated_freq, on_mode=self.on_mode).item(),
-      LabelField("Ticks:", get_addition=self.get_calculated_ticks).item(),
-      LabelField("Res F:", get_addition=self.get_actual_freq).item(),
+      Field("F", get_value=lambda: self.x, on_change=self.set_x, render_value=self.render_x, with_exp=True).item(),
+      LabelField("MF", get_addition=self.get_calculated_freq, on_mode=self.on_mode).item(),
+      LabelField("Ticks", get_addition=self.get_calculated_ticks).item(),
+      LabelField("Res F", get_addition=self.get_actual_freq).item(),
     ]
 
     super().__init__(on_exit)
@@ -26,7 +26,7 @@ class FreqCalculator(UIListProgram):
     self.calc()
   
   def render_x(self, x):
-     return FRenderer.render(x)
+     return f"{x}Hz"
 
   def calc(self):
     self.mf, self.ticks = get_best_machine_freq(self.x)

@@ -4,7 +4,7 @@ from lib.store import Store
 from lib.autostart import autostartables, get_autostart_title, set_autostart_title
 import machine
 
-VERSION = "v2.0.0"
+VERSION = "v2.0.1"
 
 """
 Store
@@ -100,7 +100,9 @@ class Settings(UIListProgram):
         elif (event == UIListProgram.DEC):
             freq -= 1000000
 
-        machine.freq(max(100_000_000, min(136_000_000, freq)))
+        freq = max(100_000_000, min(136_000_000, freq))
+        set_freq(freq)
+        machine.freq(freq)
 
     def handle_contrast_change(self, event):
         contrast = int(self.display.get_contrast())

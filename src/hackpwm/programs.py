@@ -1,31 +1,7 @@
 from rp2 import StateMachine, PIO, asm_pio
 from lib.utils import percent_str, ticks_to_time_str, ticks_to_freq_str, is_int
 from lib.fields import Field, LabelField
-from lib.constants import (
-    OUT1, OUT2, OUT3, OUT4, OUT5, OUT6,
-    PIN_GP02, PIN_GP03, PIN_GP04
-)
-
-PIN_MAPPING = {
-    "OUT1": OUT1,
-    "OUT2": OUT2,
-    "OUT3": OUT3,
-    "OUT4": OUT4,
-    "OUT5": OUT5,
-    "OUT6": OUT6,
-    "GP02": PIN_GP02,
-    "GP03": PIN_GP03,
-    "GP04": PIN_GP04,
-}
-
-
-def get_pin_value(v):
-    if (v is None):
-        return None
-    if (is_int(v)):
-        return v
-    return PIN_MAPPING[v]
-
+from hackpwm.pins import get_pin_value
 
 class PIOWrapper:
     MAX_VALUE = (1 << 31) - 1
@@ -101,14 +77,18 @@ class PIOWrapper:
         self.paused = False
 
     def apply_params(self):
+        putted = False
         if self.paused:
             return
         if is_int(self._y):
             self.sm.put(self._y)
+            putted = True
         if is_int(self._x):
             self.sm.put(self._x)
+            putted = True
 
-        self.sm.exec("in_(null, 32)")
+        if putted:
+            self.sm.exec("in_(null, 32)")
 
     def stop_and_remove(self):
         pio = 0
@@ -134,6 +114,7 @@ class BasePIOControl(PIOWrapper):
     # The base store structure
     store_structure = {
         "version": 0,
+        "init": True,
         "x": 10000,
         "y": 10000,
     }
@@ -143,16 +124,16 @@ class BasePIOControl(PIOWrapper):
         store_struct = dict(self.store_structure,
                             **({"pid": self.pid}),
                             **self.additional_store_items)
-        print(store_struct)
         return store_struct
 
     # Creation of the StateMachine inside a PWMSystem
-    def __init__(self, label=None, pin=None, wait_pin=None, count_pin=None, wait_level=1, **kwargs):
+    def __init__(self, label=None, pin=None, wait_pin=None, count_pin=None, wait_level=1, d=None, **kwargs):
         self.label = label
         self.count_pin = get_pin_value(count_pin)
         self.wait_pin = get_pin_value(wait_pin)
         self.wait_level = wait_level
         self.pin = get_pin_value(pin)
+        self.d = d
         super().__init__()
 
     def run(self):
@@ -175,6 +156,15 @@ class BasePIOControl(PIOWrapper):
         self.init_params()
 
     def init_params(self):
+        # If init store, preset with defaults
+        if (isinstance(self.d, dict) and self.store.get("init")):
+            self.store.set("init", False)
+            self.store.set("y", self.d.get("y"))
+            self.store.set("x", self.d.get("x"))
+            if (hasattr(self.store.initial_data, "%")
+                and hasattr(self.d, "%")):
+                self.store.set("%", self.d.get("%"))
+
         self.x(self.store.get("x"))
         self.y(self.store.get("y"))
 
@@ -222,7 +212,7 @@ class PWM(BasePIOControl):
     wait_pin = None
 
     additional_store_items = {
-        "duty_percent": None,
+        "%": None,
     }
 
     def create_pwm_program(self, wait_pin=None, wait_level=1):
@@ -240,7 +230,7 @@ class PWM(BasePIOControl):
             mov(x, osr)                      # x
 
             if isinstance(wait_pin, int):
-                wait(wait_level, gpio, wait_pin)
+                wait(wait_level, gpio, wait_pin) # x
 
             label("high")
             jmp(y_dec, "high")  .side(1)     # y
@@ -261,7 +251,7 @@ class PWM(BasePIOControl):
     def get_period(self):
         return self.x() + self.y()
 
-    def get_duty_percent(self): return self.store.get("duty_percent")
+    def get_duty_percent(self): return self.store.get("%")
 
     def get_machine_args(self):
         return {"sideset_base": self.pin}
@@ -314,18 +304,18 @@ class PWM(BasePIOControl):
         period = self.get_period()
         y = self.y(min(value, period - self.X))
         if (self.is_duty_percent()):
-            self.store.set("duty_percent", y / period)
+            self.store.set("%", y / period)
         self.x(period - y)
         self.on_change_y(y)
 
     def switch_duty_mode(self, e):
         if (self.is_duty_percent()):
-            self.store.set("duty_percent", None)
+            self.store.set("%", None)
         else:
-            self.store.set("duty_percent", self.y() / self.get_period())
+            self.store.set("%", self.y() / self.get_period())
 
     def is_duty_percent(self):
-        return self.store.get("duty_percent") is not None
+        return self.store.get("%") is not None
 
 
 """
@@ -391,7 +381,7 @@ class PHASE_PULSE(BasePIOControl):
     label_duty = "D"
 
     def create_phase_pulse_program(self, wait_pin=None, wait_level=None, count_pin=None):
-        @asm_pio(sideset_init=PIO.OUT_LOW)
+        @asm_pio(set_init=PIO.OUT_LOW)
         def program():
             label("load")
             pull()
@@ -400,9 +390,9 @@ class PHASE_PULSE(BasePIOControl):
 
             wrap_target()
             label("wrap")
-            mov(y, isr)         .side(0)     # x
+            set(pins, 0)
+            mov(y, isr)                      # x
             jmp(not_y, "load")               # x
-            set(y, (y - 1))
             mov(x, osr)                      # x
             wait(int(not wait_level), gpio, wait_pin)
             wait(wait_level, gpio, wait_pin)                  # x
@@ -410,16 +400,18 @@ class PHASE_PULSE(BasePIOControl):
             label("wait")
             jmp(x_dec, "wait")               # x
 
-            label("run")
+            set(pins, 1)
             if (isinstance(count_pin, int)):
-                wait(1, gpio, count_pin)     .side(1)
-                wait(0, gpio, count_pin)
+                label("run")
                 jmp(not_y, "wrap")
-            jmp(y_dec, "run")                .side(1)  # y
-
+                wait(1, gpio, count_pin)
+                wait(0, gpio, count_pin)
+            else:
+                label("run")
+            jmp(y_dec, "run")
             wrap()
 
-        return program, len(program[0]), 6, 1
+        return program, len(program[0]), 6, 0 if is_int(count_pin) else 1
 
 
     def create_program(self):
@@ -430,7 +422,7 @@ class PHASE_PULSE(BasePIOControl):
         )
 
     def get_machine_args(self):
-        return {"sideset_base": self.pin}
+        return {"set_base": self.pin}
 
     def create_fields(self):
         fields = []
@@ -452,5 +444,23 @@ class PHASE_PULSE(BasePIOControl):
         fields.append(duty_field)
         return fields
 
+class INVERT(BasePIOControl):
+    pid = "INVERT"
+    X = None
+    Y = None
 
-ALL_PROGRAMS = [PWM, PUSH_PULL, PHASE_PULSE]
+    def get_machine_args(self):
+        return {"sideset_base": self.pin}
+
+    def create_program(self):
+        @asm_pio(sideset_init=PIO.OUT_LOW)
+        def program():
+            wait(0, gpio, self.wait_pin) .side(0)
+            wait(1, gpio, self.wait_pin) .side(1)
+
+        return program, len(program[0]), 0, 0
+
+    def get_fields(self):
+        return []
+
+ALL_PROGRAMS = [PWM, PUSH_PULL, PHASE_PULSE, INVERT]

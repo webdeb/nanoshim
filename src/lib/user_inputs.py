@@ -39,6 +39,4 @@ async def create_inputs():
         PIN_ENC_C
     )
 
-    print("Inputs created")
-
     return _Buttons, _Encoder

@@ -1,7 +1,7 @@
 from lib.ui_program import UIListProgram
 from lib.store import Store, ChildStore
 from misc.rgbled import Led
-
+import gc
 
 def first_fit_pio(instructions_per_sm):
     free_instructions = [32, 32]
@@ -61,7 +61,7 @@ class PWMSystem(UIListProgram):
             )
             programs_store.append(program_store)
             instructions.append([idx, program.instructions])
-            version += int(program_store.initial_data.get("version"))
+            version += int(program_store.initial_data.get("version", 0))
 
         self.store = Store(f"/store/{self.title}.json", {
             "version": version,
@@ -75,6 +75,8 @@ class PWMSystem(UIListProgram):
             program.setup_store(programs_store[idx])
             program.store.set_parent(self.store)
             program.setup_machine(programs_sm[idx][2])
+
+        gc.collect()
 
     def reload(self):
         self.stop_and_remove()

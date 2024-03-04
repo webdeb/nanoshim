@@ -2,10 +2,30 @@ import os
 import json
 import uasyncio as asyncio
 
+class StoreRegistry():
+    stores = []
+
+    def add_store(self, store):
+        self.stores.append(store)
+
+    async def start_saver(self):
+        self._run = asyncio.create_task(self.saver())
+
+    async def saver(self):
+        while True:
+            for s in self.stores:
+                if (s.has_updates):
+                    s.save()
+
+            await asyncio.sleep(1)
+
+
+store_registry = StoreRegistry()
 
 class Store:
     is_loading = False
     is_saving_scheduled = False
+    has_updates = False
     data = None
 
     def __init__(self, path, inital_data):
@@ -17,6 +37,7 @@ class Store:
         self.ensure_file()
         self.load()
         self.ensure_version()
+        store_registry.add_store(self)
 
     """
     Ensure the file exists and is initialised
@@ -53,10 +74,7 @@ class Store:
         else:
             obj[path_parts[-1]] = value
 
-        if (self.is_saving_scheduled == False):
-            self.is_saving_scheduled = True
-            loop = asyncio.get_event_loop()
-            loop.create_task(self.save_async())
+        self.has_updates = True
 
     def get(self, path, data=None):
         try:
@@ -88,20 +106,13 @@ class Store:
     def save(self, data=None):
         if data == None:
             data = self.data
-
         try:
             with open(str(self.path), "w") as f:
                 f.write(json.dumps(data))
                 f.close()
+                self.has_updates = False
         except OSError as exc:
             print("Error saving to file.", self.path)
-
-        # clean()
-        self.is_saving_scheduled = False
-
-    async def save_async(self):
-        await asyncio.sleep_ms(100)
-        self.save()
 
 
 class ChildStore():
