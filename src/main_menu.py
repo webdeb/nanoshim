@@ -8,15 +8,15 @@ from programs.utilities.freq_calculator import FreqCalculator
 from programs.settings import Settings
 
 async def create_main_menu():
-    custom = import_custom()
     main_menu_items = [
         Menu(title="PWM Systems", items=load_systems()),
         Menu(title="Utils", items=[RLCCalculator, FreqCalculator]),
         Settings,
     ]
 
+    custom = import_custom()
     if (custom):
-        main_menu_items.insert(1, custom)
+        main_menu_items.insert(0, custom)
 
     main_menu = Menu(items=main_menu_items)
     add_to_autostartable("Menu", main_menu)
@@ -35,6 +35,6 @@ def import_custom():
                 programs.append(__import__(
                     f"/plugins/{f[0:-3]}", None, None, ["Program"]).Program)
 
-        return Menu(programs, "My Programs")
+        return Menu(title="My Programs", items=programs)
     except:
         return False

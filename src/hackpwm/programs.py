@@ -463,4 +463,34 @@ class INVERT(BasePIOControl):
     def get_fields(self):
         return []
 
+# TODO: IRQ_TRIGGER
+# class IRQ_TRIGGER(BasePIOControl):
+#     def create_irq_program(self):
+#         @asm_pio()
+#         def program():
+#             label("load")
+#             pull()
+#             out(isr, 32)
+#             pull()
+
+#             wrap_target()
+
+#             mov(y, isr)                      # x
+#             jmp(not_y, "load")               # x
+#             mov(x, osr)                      # x
+
+#             irq(4)                           # x
+#             label("high")
+#             jmp(y_dec, "high")               # y
+#             irq(clear, 4)                    # y
+
+#             irq(5)                           # x
+#             label("low")
+#             jmp(x_dec, "low")                # x
+#             irq(clear, 5)                    # x
+
+#             wrap()
+
+#         return program, len(program[0]), 0, 0
+
 ALL_PROGRAMS = [PWM, PUSH_PULL, PHASE_PULSE, INVERT]
