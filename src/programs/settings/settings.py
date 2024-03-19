@@ -1,15 +1,15 @@
 import machine
 from lib.ui_program import UIListProgram
-from lib.store import Store
+from lib.store import Stores
 from lib.autostart import autostartables, get_autostart_title, set_autostart_title
 import machine
 
-VERSION = "v2.0.1"
+VERSION = "v2.2-TEST"
 
 """
 Store
 """
-store = Store(path="/store/settings_store.json", inital_data={
+store = Stores.get_store(path="/store/settings_store.json", initial_data={
     "version": 3,
     "settings": {
         "contrast": 200,
@@ -21,9 +21,7 @@ def set_freq(freq): store.set("settings.machine_freq", freq)
 def get_freq(): return store.get("settings.machine_freq")
 
 machine.freq(get_freq())
-
 ns_for_mhz = [1000/i for i in range(100, 136)]
-
 
 def get_ticks_for_freq(freq: int):
     best = float("infinity")

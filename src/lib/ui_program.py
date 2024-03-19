@@ -13,6 +13,7 @@ class UIListProgram:
     display = display
     selected_item = 0
     items = []
+    set_exit = None
 
     MINUS = 1
     PLUS = 2
@@ -25,8 +26,11 @@ class UIListProgram:
             self.on_exit = on_exit
 
     def __call__(self, on_exit=None):
-        if (on_exit):
+        if (callable(self.set_exit)):
+            self.set_exit(on_exit)
+        elif (on_exit):
             self.on_exit = on_exit
+
         return self
 
     def get_items(self):

@@ -1,7 +1,7 @@
 from machine import Pin
 from rp2 import asm_pio, PIO
 from lib.ui_program import UIListProgram
-from lib.store import Store
+from lib.store import Stores
 from lib.with_exp import WithExp
 from lib.constants import OUT1, OUT6
 from piopwm import PioPWM, TRIGGER, PROGRAM
@@ -9,7 +9,7 @@ from piopwm.pio_programs import HIGH, LOW
 from lib.utils import ns_to_str, ticks_to
 from lib.autostart import autostart
 
-store = Store("/store/sixmix.json", {
+store = Stores.get_store("/store/sixmix.json", {
     "version": 1,
     "period": 1000,
     "overlap": 220,
@@ -47,7 +47,7 @@ class Program(UIListProgram, WithExp):
 
     def run(self):
         self.pwm = PioPWM(0, mode=TRIGGER)
-        self.program = PioPWM(1, mode=PROGRAM, program=sixmix,
+        self.program = PioPWM(1, mode=PROGRAM, program=sixmix_inverted,
                               sideset_base=Pin(OUT1), set_base=Pin(OUT6))
         self.program.sm.active(1)
         self.load_params()
@@ -91,3 +91,20 @@ def sixmix():
     wait(1, irq, 4)     .side(0b10000)  # <- dis 4
     set(pins, 1)        .side(0b10000)  # <- en 6
     wait(1, irq, 5)     .side(0b10000)  # <- just keep to not use opt
+
+@asm_pio(set_init=PIO.OUT_HIGH, sideset_init=[PIO.OUT_HIGH]*5)
+def sixmix_inverted():
+    wait(1, irq, 4)     .side(0b11111)  # <- dis 5
+    wait(1, irq, 5)     .side(0b11110)  # <- en 1
+    set(pins, 1)        .side(0b11110)  # <- dis 6
+    wait(1, irq, 4)     .side(0b11110)  # <- just keep to not use opt
+    wait(1, irq, 5)     .side(0b11100)  # <- en 2
+    wait(1, irq, 4)     .side(0b11101)  # <- dis 1
+    wait(1, irq, 5)     .side(0b11001)  # <- en 3
+    wait(1, irq, 4)     .side(0b11011)  # <- dis 2
+    wait(1, irq, 5)     .side(0b10011)  # <- en 4
+    wait(1, irq, 4)     .side(0b10111)  # <- dis 3
+    wait(1, irq, 5)     .side(0b00111)  # <- en 5
+    wait(1, irq, 4)     .side(0b01111)  # <- dis 4
+    set(pins, 0)        .side(0b01111)  # <- en 6
+    wait(1, irq, 5)     .side(0b01111)  # <- just keep to not use opt

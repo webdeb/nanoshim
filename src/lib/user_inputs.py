@@ -21,6 +21,9 @@ _Encoder = None
 
 
 def get_inputs():
+    if (_Buttons == None or _Encoder == None):
+        raise TypeError('Buttons or Encoder not initialized')
+
     return _Buttons, _Encoder
 
 

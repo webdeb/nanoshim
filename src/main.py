@@ -1,7 +1,7 @@
 import uasyncio as asyncio
 from lib.user_inputs import create_inputs
 from main_menu import create_main_menu
-from lib.store import store_registry
+from lib.store import Stores
 
 
 def set_global_exception():
@@ -15,7 +15,7 @@ def set_global_exception():
 
 
 async def start_app():
-    await store_registry.start_saver()
+    await Stores.start_saver()
     await create_inputs()
     await create_main_menu()
 
