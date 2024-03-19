@@ -20,14 +20,11 @@ def first_fit_pio(instructions_per_sm):
 
     return sorted(sorted_sm, key=lambda sm: sm[0])
 
-
 class PWMSystem(UIListProgram):
     autostartable = True
     running = False
     pwms = {}
     programs = []
-
-    # store
     version = 4
 
     def __init__(self, title, programs):
@@ -83,7 +80,8 @@ class PWMSystem(UIListProgram):
         self.load()
 
     def handle_button(self):
-        self.stop_and_remove()  # -> stop and remove programs
+        if self.running: return
+
         self.on_exit()
 
     def run(self):
