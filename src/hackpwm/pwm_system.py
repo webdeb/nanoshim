@@ -2,7 +2,6 @@ from lib.ui_program import UIListProgram
 from lib.store import Stores, ChildStore
 from hackpwm.programs import ALL_PROGRAMS
 from misc.rgbled import Led
-import gc
 
 def first_fit_pio(instructions_per_sm):
     free_instructions = [32, 32]
@@ -24,7 +23,6 @@ def first_fit_pio(instructions_per_sm):
 class PWMSystem(UIListProgram):
     autostartable = True
     running = False
-    pwms = {}
     programs = []
     version = 4
 
@@ -35,8 +33,6 @@ class PWMSystem(UIListProgram):
     def on_exit(self):
         self.remove()
         self.programs.clear()
-        gc.collect()
-
         self.leave()
 
     def set_exit(self, on_exit):
@@ -51,6 +47,7 @@ class PWMSystem(UIListProgram):
     def start(self):
         self.load()
         super().start()
+        # self.run()
 
     def load(self):
         instructions = []
@@ -82,6 +79,8 @@ class PWMSystem(UIListProgram):
             program.setup_store(programs_store[idx])
             program.store.set_parent(self.store)
             program.setup_machine(programs_sm[idx][2])
+
+        
 
     def handle_button(self):
         if self.running: return

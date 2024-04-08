@@ -3,6 +3,7 @@ from rp2 import StateMachine, PIO, asm_pio
 from lib.utils import percent_str, ticks_to_time_str, ticks_to_freq_str, is_int
 from lib.fields import Field, LabelField
 from hackpwm.pins import OUT1, OUT6, get_pin_value
+from time import sleep
 
 class PIOWrapper:
     MAX_VALUE = (1 << 31) - 1
@@ -36,9 +37,11 @@ class PIOWrapper:
         if (self.program is None):
             raise AttributeError(f"Missing PIO program")
         print("sm_id", self.sm_id, self.pid)
-        self.sm = StateMachine(self.sm_id, prog=self.program, **args)
-    
+        print(args)
+        self.sm = StateMachine(self.sm_id, self.program, **args)
+
     def setup_machine(self, sm_id):
+        print("setup machine")
         self.sm_id = sm_id
         self.init_machine()
         self.init_params()
@@ -63,6 +66,14 @@ class PIOWrapper:
 
         if (apply and self.sm.active()):
             self.apply_params()
+
+    def on_change_x(self, value):
+        self.x(value)
+        self.update_params()
+
+    def on_change_y(self, value):
+        self.y(value)
+        self.update_params()
 
 
     def __init__(self):
@@ -98,16 +109,13 @@ class PIOWrapper:
         return self._y + self.Y
 
     def active(self, on=1):
-        print("active base", on)
-        if (on):
+        print("active", on)
+        if (on == 1):
             self.apply_params()
-
-        self.sm.active(on)
-        if (on is not 1):
+            self.sm.active(1)
+        else:
             self.init_machine()
-
-    def sm_load(self, sm):
-        sm.exec('in_(null, 32)')
+            self.sm.active(0)
 
     def pause(self):
         self.active(0)
@@ -118,25 +126,29 @@ class PIOWrapper:
         self.paused = False
 
     def apply_params(self):
-        print("apply params..", self._x, self._y, self.paused, self.sm, self.program)
+        print("apply params..", self._x, self._y, self.paused, self.sm, self.program, self.sm.active(1))
         putted = False
         if self.paused:
             return
+
         if is_int(self._y):
-            print("before.. y..")
+            print("before.. y..", self._y)
             self.sm.put(self._y)
-            putted = True
-        if is_int(self._x):
-            print("before.. x..")
-            self.sm.put(self._x)
+            print("after.. y..")
             putted = True
 
-        print("before.. exec..")
+        if is_int(self._x):
+            print("before.. x..", self._x)
+            self.sm.put(self._x)
+            print("after.. x..")
+            putted = True
+
         if putted:
+            print("before.. exec..")
             self.sm.exec("in_(null, 32)")
 
     def remove(self):
-        print("remove: sm_id", self.sm_id, self.pid)
+        print("remove: sm_id---", self.sm_id, self.pid)
         PIO(pio_by_sid(self.sm_id)).remove_program(self.program)
 
     # The base store structure
@@ -190,14 +202,6 @@ class BasePIOControl(PIOWrapper):
 
         return self.fields
 
-    def on_change_x(self, value):
-        self.x(value)
-        self.update_params()
-
-    def on_change_y(self, value):
-        self.y(value)
-        self.update_params()
-
     def create_fields(self):
         fields = []
         if (self.label):
@@ -245,8 +249,8 @@ class PWM(BasePIOControl):
             jmp(not_y, "load")               # x
             mov(x, osr)                      # x
 
-            if isinstance(wait_pin, int):
-                wait(wait_level, gpio, wait_pin) # x
+            # if isinstance(wait_pin, int):
+            #     wait(wait_level, gpio, wait_pin) # x
 
             label("high")
             jmp(y_dec, "high")  .side(1)     # y
@@ -539,20 +543,45 @@ class MIX(IRQ_TRIGGER):
         super().__init__(pin=pin, **kwargs)
 
     def create_mix_program(self):
+        print("CREATE PROGRAM")
+
         if (self.pins == 6):
-            return create_six_pin_mix_program(self.inverted)
+            return create_six_pin_mix_program(self.inverted, self.mode)
         else:
-            return create_mix_program(self.inverted, self.pins, self.mode)
+            pins = self.pins
+            inverted = self.inverted
+
+            mode = 3 if self.mode == OVERLAP_MODE else 0 
+            mask = ((1<<pins) - 1) * inverted
+            init_polarity = PIO.OUT_HIGH if inverted else PIO.OUT_LOW
+
+            @asm_pio(sideset_init=[init_polarity]*pins)
+            def program():
+                for i in range(1, pins+1):
+                    print(i)
+
+                    b = (1 << (i - 1)) ^ mask
+                    sset = ((i * mode) % (pow(2, pins) - 1)) ^ mask
+
+                    print(bin(sset), bin(b), self.pid)
+
+                    wait(1, irq, 4).side(sset)
+                    wait(1, irq, 5).side(b)
+
+            print("Program created")
+            print("----")
+
+            return program, len(program), 0, 0
+
 
     def init_machine(self):
+        mix_args = {"sideset_base": self.pin}
+        if (self.pins == 6): mix_args["set_base"] = OUT6
+
         self.sm = StateMachine(self.sm_id, self.program)
-        machine_args = {"sideset_base": self.pin}
-        if (self.pins == 6): machine_args["set_base"] = OUT6
-        self.mix_sm = StateMachine(self.sm_id + 1, self.mix_program, **machine_args)
-        print("(Re)create sm done")
+        self.mix_sm = StateMachine(self.sm_id + 1, self.mix_program, **mix_args)
 
     def active(self, on=1):
-        print(on)
         if (on):
             super().active(on)
             self.mix_sm.active(on)
@@ -567,7 +596,6 @@ class MIX(IRQ_TRIGGER):
     def create_program(self):
         self.mix_program, mix_inst, _, _ = self.create_mix_program()
         self.program, instructions, X, Y = tuple(super().create_program())
-        print(self.mix_program, mix_inst, self.program, instructions)
         return (self.program, (instructions + mix_inst), X, Y)
 
     def on_change_y(self, value):
@@ -580,25 +608,9 @@ class MIX(IRQ_TRIGGER):
         self.y(value)
         self.update_params()
 
-    def on_change_x(self, value):
-        self.x(value)
-        self.update_params()
-
 
 ALL_PROGRAMS = [PWM, PUSH_PULL, PHASE_PULSE, INVERT, IRQ_TRIGGER, MIX]
 
-def create_mix_program(inverted, pins, mode):
-    mode = 3 if mode == OVERLAP_MODE else 0 
-    @asm_pio(sideset_init=[PIO.OUT_HIGH if inverted else PIO.OUT_LOW]*pins)
-    def program():
-        for i in range(1, pins+1):
-            sset = (i * mode) % (pow(2, pins) - 1) ^((1<<pins) - 1) * 1 if inverted else 0
-            i = i ^ ((1<<pins - 1) * 1 if inverted else 0)
-            print(sset, i)
-            wait(1, irq, 4).side(sset)
-            wait(1, irq, 5).side(i)
-
-    return program, len(program), 0, 0
 
 def create_six_pin_mix_program(inverted, mode=OVERLAP_MODE):
     init_pol = PIO.OUT_HIGH if inverted else PIO.OUT_LOW
