@@ -2,7 +2,7 @@ from machine import Pin, I2C
 import framebuf
 import misc.images as images
 import lib.ssd1306 as ssd1306
-from lib.store import Store
+from lib.store import Stores
 from lib.constants import (
     PIN_SCL,
     PIN_SDA
@@ -14,7 +14,7 @@ STORE_STRUCTURE = {
     "version": 1,
     "contrast": 200,
 }
-store = Store(path="/store/display.json", inital_data=STORE_STRUCTURE)
+store = Stores.get_store(path="/store/display.json", initial_data=STORE_STRUCTURE)
 
 
 class Display:

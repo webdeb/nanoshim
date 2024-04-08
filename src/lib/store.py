@@ -2,26 +2,6 @@ import os
 import json
 import uasyncio as asyncio
 
-class StoreRegistry():
-    stores = []
-
-    def add_store(self, store):
-        self.stores.append(store)
-
-    async def start_saver(self):
-        self._run = asyncio.create_task(self.saver())
-
-    async def saver(self):
-        while True:
-            for s in self.stores:
-                if (s.has_updates):
-                    s.save()
-
-            await asyncio.sleep(1)
-
-
-store_registry = StoreRegistry()
-
 class Store:
     is_loading = False
     is_saving_scheduled = False
@@ -37,7 +17,6 @@ class Store:
         self.ensure_file()
         self.load()
         self.ensure_version()
-        store_registry.add_store(self)
 
     """
     Ensure the file exists and is initialised
@@ -133,3 +112,31 @@ class ChildStore():
 
     def set(self, key, value):
         return self.parent_store.set(f"{self.key}.{key}", value)
+
+class StoreRegistry():
+    _store_paths = []
+    _stores = {}
+
+    def get_store(self, path, initial_data):
+        if (path not in self._store_paths):
+            self._add_store(path, Store(path, initial_data))
+        
+        return self._stores[path]
+
+    async def start_saver(self):
+        self._run = asyncio.create_task(self._saver())
+
+    async def _saver(self):
+        while True:
+            for p in self._store_paths:
+                if (self._stores[p].has_updates):
+                    self._stores[p].save()
+
+            await asyncio.sleep(1)
+    def _add_store(self, path, store):
+        self._stores[path] = store
+        self._store_paths.append(path)
+
+
+
+Stores = StoreRegistry()

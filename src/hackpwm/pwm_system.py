@@ -1,5 +1,6 @@
 from lib.ui_program import UIListProgram
-from lib.store import Store, ChildStore
+from lib.store import Stores, ChildStore
+from hackpwm.programs import ALL_PROGRAMS
 from misc.rgbled import Led
 import gc
 
@@ -27,12 +28,19 @@ class PWMSystem(UIListProgram):
     programs = []
     version = 4
 
-    def __init__(self, title, programs):
+    def __init__(self, title, programs_info):
         self.title = title
-        self.programs = programs
+        self.programs_info = programs_info
+
+    def on_exit(self):
+        self.remove()
+        self.programs.clear()
+        gc.collect()
+
+        self.leave()
 
     def set_exit(self, on_exit):
-        self.on_exit = on_exit
+        self.leave = on_exit
 
     def get_items(self):
         items = []
@@ -50,7 +58,8 @@ class PWMSystem(UIListProgram):
         version = self.version
 
         # 1. loop load programs data
-        for idx, program in enumerate(self.programs):
+        for idx, p in enumerate(self.programs_info):
+            program = self.create_program(p)
             program_store = ChildStore(
                 f"programs.{idx}",
                 program.get_store_structure(),
@@ -59,8 +68,9 @@ class PWMSystem(UIListProgram):
             programs_store.append(program_store)
             instructions.append([idx, program.instructions])
             version += int(program_store.initial_data.get("version", 0))
+            self.programs.append(program)
 
-        self.store = Store(f"/store/{self.title}.json", {
+        self.store = Stores.get_store(f"/store/{self.title}.json", {
             "version": version,
             "programs": [p.initial_data for p in programs_store]
         })
@@ -72,12 +82,6 @@ class PWMSystem(UIListProgram):
             program.setup_store(programs_store[idx])
             program.store.set_parent(self.store)
             program.setup_machine(programs_sm[idx][2])
-
-        gc.collect()
-
-    def reload(self):
-        self.stop_and_remove()
-        self.load()
 
     def handle_button(self):
         if self.running: return
@@ -102,7 +106,12 @@ class PWMSystem(UIListProgram):
         else:
             self.run()
 
-    def stop_and_remove(self):
-        self.stop()
+    def remove(self):
         for program in self.programs:
-            program.stop_and_remove()
+            program.remove()
+
+    def create_program(self, p):
+        pid = p.get("pid")
+        ProgramClass = next(filter(lambda p: p.pid == pid, ALL_PROGRAMS))
+
+        return ProgramClass(**p)

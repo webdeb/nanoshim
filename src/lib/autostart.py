@@ -1,6 +1,6 @@
-from lib.store import Store
+from lib.store import Stores
 
-store = Store("/store/autostart.json", {
+store = Stores.get_store("/store/autostart.json", {
     "version": 1,
     "title": ""
 })
