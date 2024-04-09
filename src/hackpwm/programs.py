@@ -49,7 +49,6 @@ class PIOWrapper:
             raise AttributeError(f"Missing PIO program")
 
         self.sm = StateMachine(self.sm_id, self.program, **args)
-        self.sm.restart()
 
     def setup_machine(self, sm_id):
         self.sm_id = sm_id
@@ -70,7 +69,7 @@ class PIOWrapper:
 
         self.update_params()
 
-    def update_params(self, apply=True):
+    def update_params(self):
         self.store.set("x", self.x())
         self.store.set("y", self.y())
 
@@ -135,19 +134,13 @@ class PIOWrapper:
         self.paused = False
 
     def apply_params(self):
-        putted = False
         if self.paused:
             return
 
-        if is_int(self._y):
-            self.sm.put(self._y)
-            putted = True
+        if is_int(self._y): self.sm.put(self._y)
+        if is_int(self._x): self.sm.put(self._x)
 
-        if is_int(self._x):
-            self.sm.put(self._x)
-            putted = True
-
-        if putted and self.sm.tx_fifo() > 0:
+        if self.sm.tx_fifo() > 0:
             self.sm.exec("in_(null, 32)")
 
     def remove(self):
@@ -506,6 +499,7 @@ class IRQ_TRIGGER(BasePIOControl):
             jmp(not_y, "load")               # x
             mov(x, osr)
                                              # x
+            irq(clear, 5)
             irq(4)                           # x
             label("high")
             jmp(y_dec, "high")               # y
@@ -514,7 +508,6 @@ class IRQ_TRIGGER(BasePIOControl):
             irq(5)                           # x
             label("low")
             jmp(x_dec, "low")                # x
-            irq(clear, 5)
 
             wrap()
 
@@ -574,8 +567,8 @@ class MIX(IRQ_TRIGGER):
         mix_args = {"sideset_base": self.pin}
         if (self.pins == 6): mix_args["set_base"] = OUT6
 
-        self.sm = StateMachine(self.sm_id, self.program)
-        self.mix_sm = StateMachine(self.sm_id + 1, self.mix_program, **mix_args)
+        self.sm = StateMachine(self.sm_id[0], self.program)
+        self.mix_sm = StateMachine(self.sm_id[1], self.mix_program, **mix_args)
 
     def active(self, on=1):
         if (on == 1):
@@ -586,13 +579,13 @@ class MIX(IRQ_TRIGGER):
             super().active(0)
 
     def remove(self):
-        PIO(pio_by_sid(self.sm_id)).remove_program(self.program)
-        PIO(pio_by_sid(self.sm_id + 1)).remove_program(self.mix_program)
+        PIO(pio_by_sid(self.sm_id[0])).remove_program(self.program)
+        PIO(pio_by_sid(self.sm_id[1])).remove_program(self.mix_program)
 
     def create_program(self):
         self.mix_program, mix_inst, _, _ = self.create_mix_program()
         self.program, instructions, X, Y = tuple(super().create_program())
-        return (self.program, (instructions + mix_inst), X, Y)
+        return (self.program, [instructions, mix_inst], X, Y)
 
     def on_change_x(self, value):
         if (self.mode is OVERLAP_MODE):

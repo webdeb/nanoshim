@@ -9,7 +9,7 @@ def first_fit_pio(instructions_per_sm):
     for (pio_idx, free) in enumerate(free_instructions):
         free_slots = 4
         for next_large in sorted_sm:
-            if (free >= next_large[1] and len(next_large) == 2):
+            if (free >= next_large[1] and len(next_large) == 3):
                 sm_id = abs(free_slots - 4) + (pio_idx * 4)
                 next_large.append(sm_id)
                 free = free - next_large[1]
@@ -19,6 +19,18 @@ def first_fit_pio(instructions_per_sm):
                 break
 
     return sorted(sorted_sm, key=lambda sm: sm[0])
+
+def group_list(list_to_group):
+    last_pidx = list_to_group[-1][0]
+    new_list = []
+    for i in range(last_pidx + 1):
+        ids = list(map(lambda i: [i[1], i[3]], sorted(filter(lambda l: l[0] == i, list_to_group), key=lambda i: i[2])))
+        if (len(ids) == 1):
+            new_list.append(ids[0][1])
+        else:
+            new_list.append(list(map(lambda i: i[1], ids)))
+    
+    return new_list
 
 class PWMSystem(UIListProgram):
     autostartable = True
@@ -63,7 +75,10 @@ class PWMSystem(UIListProgram):
                 check_key="pid"
             )
             programs_store.append(program_store)
-            instructions.append([idx, program.instructions])
+            if isinstance(program.instructions, list):
+                for iidx, i in enumerate(program.instructions): instructions.append([idx, i, iidx])
+            else:
+                instructions.append([idx, program.instructions, 0])
             version += int(program_store.initial_data.get("version", 0))
             self.programs.append(program)
 
@@ -72,15 +87,13 @@ class PWMSystem(UIListProgram):
             "programs": [p.initial_data for p in programs_store]
         })
 
-        programs_sm = first_fit_pio(instructions)
+        programs_sm = group_list(first_fit_pio(instructions))
 
         # setup machines
         for idx, program in enumerate(self.programs):
             program.setup_store(programs_store[idx])
             program.store.set_parent(self.store)
-            program.setup_machine(programs_sm[idx][2])
-
-        
+            program.setup_machine(programs_sm[idx])
 
     def handle_button(self):
         if self.running: return

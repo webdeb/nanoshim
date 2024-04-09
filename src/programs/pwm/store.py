@@ -50,6 +50,15 @@ store = Stores.get_store("/store/systems.json", {
             ]
         },
         {
+            "title": "2 MIX+",
+            "programs": [
+                { "pid": MIX.pid, "pin": "OUT1", "pins": 2, "mode": OVERLAP_MODE },
+                { "pid": PHASE_PULSE.pid, "pin": "OUT4", "wait_pin": "OUT1" },
+                { "pid": PHASE_PULSE.pid, "pin": "OUT5", "wait_pin": "OUT2" },
+                { "pid": PHASE_PULSE.pid, "pin": "OUT6", "wait_pin": "OUT3" }
+            ]
+        },
+        {
             "title": "2 MIX INV OVERLAP",
             "programs": [
                 { "pid": MIX.pid, "inverted": True, "pin": "OUT1", "pins": 2, "mode": OVERLAP_MODE }
