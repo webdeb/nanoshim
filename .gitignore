@@ -1,3 +1,5 @@
 examples
 *.code-workspace
 private
+.venv
+__pycache__

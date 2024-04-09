@@ -91,7 +91,7 @@ class Store:
                 f.close()
                 self.has_updates = False
         except OSError as exc:
-            print("Error saving to file.", self.path)
+            print("Error saving to file.", self.path, exc)
 
 
 class ChildStore():

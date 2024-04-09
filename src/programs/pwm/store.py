@@ -2,7 +2,7 @@ from hackpwm.programs import PWM, PUSH_PULL, PHASE_PULSE, INVERT, MIX, OVERLAP_M
 
 from lib.store import Stores
 store = Stores.get_store("/store/systems.json", {
-    "version": 11,
+    "version": 12,
     "systems": [
         {
             "title": "4P+",
@@ -32,7 +32,7 @@ store = Stores.get_store("/store/systems.json", {
             ]
         },
         {
-            "title": "SIXMIX INVERTED",
+            "title": "SIXMIX INV OVERLAP",
             "programs": [
                 {"pid": MIX.pid, "inverted": True, "pin": "OUT1", "pins": 6, "mode": OVERLAP_MODE}
             ]
@@ -44,13 +44,13 @@ store = Stores.get_store("/store/systems.json", {
             ]
         },
         {
-            "title": "2 MIX",
+            "title": "2 MIX OVERLAP",
             "programs": [
                 { "pid": MIX.pid, "pin": "OUT1", "pins": 2, "mode": OVERLAP_MODE }
             ]
         },
         {
-            "title": "2 MIX",
+            "title": "2 MIX INV OVERLAP",
             "programs": [
                 { "pid": MIX.pid, "inverted": True, "pin": "OUT1", "pins": 2, "mode": OVERLAP_MODE }
             ]

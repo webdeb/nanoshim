@@ -1,4 +1,4 @@
-from hackpwm import PWMSystem
+from hackpwm.pwm_system import PWMSystem
 from .store import store
 
 def load_systems():
@@ -12,14 +12,3 @@ def load_systems():
         systems.append(system)
 
     return systems
-
-# class PWMSystemLoader():
-#     title = None
-#     system: PWMSystem
-#     programs = []
-#     def __init__(self, title, programs) -> None:
-#         self.title = title
-#         self.programs = programs
-
-#     def start(self):
-#         self.system = PWMSystem(self.title, [])
