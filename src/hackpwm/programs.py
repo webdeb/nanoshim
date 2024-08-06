@@ -479,6 +479,25 @@ class INVERT(BasePIOControl):
     def get_fields(self):
         return []
 
+class COPY(BasePIOControl):
+    pid = "COPY"
+    X = None
+    Y = None
+
+    def get_machine_args(self):
+        return {"sideset_base": self.pin}
+
+    def create_program(self):
+        @asm_pio(sideset_init=PIO.OUT_LOW)
+        def program():
+            wait(1, gpio, self.wait_pin) .side(0)
+            wait(0, gpio, self.wait_pin) .side(1)
+
+        return program, len(program[0]), 0, 0
+
+    def get_fields(self):
+        return []
+
 
 class IRQ_TRIGGER(BasePIOControl):
     pid = "IRQ_TRIGGER"
@@ -594,8 +613,7 @@ class MIX(IRQ_TRIGGER):
 
         return super().on_change_x(value)
 
-ALL_PROGRAMS = [PWM, PUSH_PULL, PHASE_PULSE, INVERT, IRQ_TRIGGER, MIX]
-
+ALL_PROGRAMS = [PWM, PUSH_PULL, PHASE_PULSE, COPY, INVERT, IRQ_TRIGGER, MIX]
 
 def create_six_pin_mix_program(inverted, mode):
     init_pol = PIO.OUT_HIGH if inverted else PIO.OUT_LOW
