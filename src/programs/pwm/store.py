@@ -5,6 +5,13 @@ store = Stores.get_store("/store/systems.json", {
     "version": 12,
     "systems": [
         {
+            "title": "DOUBLE TAP",
+            "programs": [
+                {"label": "PWM", "pid": PWM.pid, "pin": "OUT1" },
+                {"label": "FOLLOW", "pid": PHASE_PULSE.pid, "pin": "OUT2", "wait_pin": "OUT1", "wait_level": 0 },
+            ]
+        },
+        {
             "title": "4P+",
             "programs": [
                 {"label": "Mod", "pid": PWM.pid, "pin": "OUT6", "d": {"x": 100000, "y": 100000, "%": 0.5 }},
