@@ -1,4 +1,7 @@
-# nanoSHIM aka hackPWM
+# HackPWM
+
+<img src="https://github.com/webdeb/nanoshim/assets/14992140/7e6a05b5-28bf-47a2-9062-699df4bb3fd5" width="600px" />
+
 
 This is a full rp2040 (aka pico) micropython project which implements some cool stuff and controls multiple PWM outputs. It can be extended to use all of the 8 PWM slices, which are provided by the pico. Actually it can be extended much more than that and I had to force me to stop implementing more fancy stuff.
 

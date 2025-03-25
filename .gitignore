@@ -1,3 +1,5 @@
-.picowgo
-.vscode
 examples
+*.code-workspace
+private
+.venv
+__pycache__
